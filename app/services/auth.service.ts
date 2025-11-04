@@ -105,14 +105,49 @@ export const signIn = async (credentials: LoginCredentials): Promise<AuthRespons
     if (error) throw error;
     if (!authData.user) throw new Error('Login failed');
 
-    // Fetch the full user profile
+    // Fetch the full user profile (use maybeSingle to handle missing profile)
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('*')
       .eq('id', authData.user.id)
-      .single();
+      .maybeSingle();
 
-    if (userError) throw userError;
+    // If user profile doesn't exist, auto-create it
+    if (!userData) {
+      console.log('User profile not found, auto-creating for:', authData.user.email);
+
+      try {
+        const { ensureUserProfile } = await import('./mlm.service');
+        const createdUser = await ensureUserProfile(authData.user);
+
+        return {
+          user: createdUser as User,
+          token: authData.session?.access_token || '',
+          refreshToken: authData.session?.refresh_token,
+        };
+      } catch (createError: any) {
+        console.error('Failed to auto-create user profile:', createError);
+
+        // Return minimal user object to allow login
+        return {
+          user: {
+            id: authData.user.id,
+            email: authData.user.email || credentials.email,
+            full_name: authData.user.user_metadata?.full_name || authData.user.email?.split('@')[0] || 'User',
+            created_at: authData.user.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            role: 'user',
+          } as User,
+          token: authData.session?.access_token || '',
+          refreshToken: authData.session?.refresh_token,
+        };
+      }
+    }
+
+    if (userError) {
+      console.error('Error fetching user profile:', userError);
+      throw userError;
+    }
 
     return {
       user: userData as User,
@@ -121,6 +156,13 @@ export const signIn = async (credentials: LoginCredentials): Promise<AuthRespons
     };
   } catch (error: any) {
     console.error('Sign in error:', error);
+
+    if (error.message?.includes('Invalid login credentials')) {
+      throw new Error('Invalid email or password');
+    } else if (error.message?.includes('Email not confirmed')) {
+      throw new Error('Please verify your email before logging in');
+    }
+
     throw new Error(error.message || 'Failed to sign in');
   }
 };
@@ -153,7 +195,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
       .from('users')
       .select('*')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (userError) {
       console.error('Error fetching user profile:', userError);
@@ -218,7 +260,7 @@ export const updateProfile = async (data: UpdateProfileData): Promise<User> => {
       })
       .eq('id', user.id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (updateError) throw updateError;
 
