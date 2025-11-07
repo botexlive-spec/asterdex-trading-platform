@@ -4,7 +4,7 @@
  * NO SUPABASE - Pure MySQL API
  */
 
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = 'http://localhost:3001/api';
 
 /**
  * Get auth token from storage
