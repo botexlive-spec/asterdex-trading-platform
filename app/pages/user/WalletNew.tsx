@@ -20,7 +20,7 @@ import {
   getWithdrawalLimits,
   type WalletBalance,
   type Transaction as WalletTransaction,
-} from '../../services/wallet.service';
+} from '../../services/mlm-client';
 
 // Validation Schemas
 const cryptoDepositSchema = z.object({

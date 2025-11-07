@@ -4,6 +4,8 @@
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// Re-export types from wallet.service for compatibility
+export type { WalletBalance, Transaction, DepositAddress } from './wallet.service';
 
 /**
  * Get auth token from localStorage
@@ -74,4 +76,88 @@ export async function getPackages() {
  */
 export async function getUserPackages() {
   return apiRequest('/api/packages/user');
+}
+
+// ============================================
+// WALLET OPERATIONS
+// ============================================
+
+/**
+ * Get wallet balance
+ */
+export async function getWalletBalance() {
+  return apiRequest('/api/wallet/balance');
+}
+
+/**
+ * Generate deposit address
+ */
+export async function generateDepositAddress(crypto: string, network: string) {
+  return apiRequest('/api/wallet/deposit/address', {
+    method: 'POST',
+    body: JSON.stringify({ crypto, network }),
+  });
+}
+
+/**
+ * Submit deposit request
+ */
+export async function submitDeposit(request: {
+  method: string;
+  amount: number;
+  crypto?: string;
+  network?: string;
+  transactionId?: string;
+  referenceNumber?: string;
+  utrNumber?: string;
+}) {
+  return apiRequest('/api/wallet/deposit', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+/**
+ * Get withdrawal limits
+ */
+export async function getWithdrawalLimits() {
+  return apiRequest('/api/wallet/withdrawal/limits');
+}
+
+/**
+ * Submit withdrawal request
+ */
+export async function submitWithdrawal(request: {
+  amount: number;
+  method: string;
+  accountId: string;
+  password: string;
+  verificationCode?: string;
+}) {
+  return apiRequest('/api/wallet/withdrawal', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+/**
+ * Transfer funds to another user
+ */
+export async function transferFunds(request: {
+  recipientId: string;
+  amount: number;
+  note?: string;
+  password: string;
+}) {
+  return apiRequest('/api/wallet/transfer', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+/**
+ * Get pending transactions (deposits/withdrawals)
+ */
+export async function getPendingTransactions() {
+  return apiRequest('/api/wallet/transactions/pending');
 }
