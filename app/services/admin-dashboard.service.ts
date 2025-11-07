@@ -175,13 +175,13 @@ export const getRecentActivities = async (limit: number = 20): Promise<RecentAct
 
     // Get recent transactions (includes package purchases, withdrawals, etc.)
     const transactions = await safeQuery(async () => {
-      const data = await apiRequest<any>(`/api/admin/transactions?limit=${limit}&sort=created_at&order=desc`);
+      const data = await apiRequest<any>(`/admin/transactions?limit=${limit}&sort=created_at&order=desc`);
       return data.transactions || [];
     }, []);
 
     // Get recent users for registration activities
     const recentUsers = await safeQuery(async () => {
-      const data = await apiRequest<any>(`/api/admin/users?limit=10&sort=created_at&order=desc`);
+      const data = await apiRequest<any>(`/admin/users?limit=10&sort=created_at&order=desc`);
       return data.users || [];
     }, []);
 
@@ -251,7 +251,7 @@ export const getTopUsers = async (limit: number = 10): Promise<TopUser[]> => {
     // Verify admin access
     await requireAdmin();
 
-    const data = await apiRequest<any>(`/api/admin/users?limit=${limit}&sort=total_investment&order=desc`);
+    const data = await apiRequest<any>(`/admin/users?limit=${limit}&sort=total_investment&order=desc`);
     const users = data.users || [];
 
     const topUsers: TopUser[] = users.map((user: any) => ({
@@ -315,7 +315,7 @@ export const getRevenueChartData = async (days: number = 30) => {
     // Verify admin access
     await requireAdmin();
 
-    const data = await apiRequest<any>(`/api/admin/analytics/revenue?days=${days}`);
+    const data = await apiRequest<any>(`/admin/analytics/revenue?days=${days}`);
 
     if (data.revenue_by_day) {
       return data.revenue_by_day.map((item: any) => ({

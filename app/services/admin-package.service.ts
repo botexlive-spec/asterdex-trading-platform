@@ -224,7 +224,7 @@ export async function updatePackage(id: string, packageData: Partial<CreatePacka
     if (packageData.matching_bonus_percentage !== undefined) payload.matching_bonus_percentage = packageData.matching_bonus_percentage;
     if (packageData.is_active !== undefined) payload.is_active = packageData.is_active;
 
-    await apiRequest(`/api/admin/packages/${id}`, {
+    await apiRequest(`/admin/packages/${id}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
     });
@@ -243,7 +243,7 @@ export async function deletePackage(id: string): Promise<void> {
   try {
     await requireAdmin();
 
-    await apiRequest(`/api/admin/packages/${id}`, {
+    await apiRequest(`/admin/packages/${id}`, {
       method: 'DELETE',
     });
 
@@ -264,7 +264,7 @@ export async function togglePackageStatus(id: string): Promise<Package> {
 
     const newStatus = (pkg.is_active || pkg.status === 'active') ? false : true;
 
-    await apiRequest(`/api/admin/packages/${id}`, {
+    await apiRequest(`/admin/packages/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ is_active: newStatus }),
     });
@@ -338,7 +338,7 @@ export async function setPackageLevelCommissions(
 
     const percentages = commissions.map(c => c.percentage);
 
-    await apiRequest(`/api/admin/packages/${packageId}`, {
+    await apiRequest(`/admin/packages/${packageId}`, {
       method: 'PUT',
       body: JSON.stringify({ level_income_percentages: percentages }),
     });
