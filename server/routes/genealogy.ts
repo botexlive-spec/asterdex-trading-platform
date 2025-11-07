@@ -495,7 +495,7 @@ router.post('/add-member', authenticateToken, async (req: Request, res: Response
     await query(
       `INSERT INTO binary_tree (id, user_id, parent_id, left_child_id, right_child_id, level, position)
        VALUES (?, ?, ?, NULL, NULL, ?, ?)`,
-      [nodeId, userId, parentNode.id, parentLevel + 1, position]
+      [nodeId, userId, parentId, parentLevel + 1, position]
     );
 
     console.log(`✅ [Genealogy] Binary node created: ${nodeId}`);
