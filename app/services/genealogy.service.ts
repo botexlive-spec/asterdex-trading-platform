@@ -91,7 +91,7 @@ export async function getBinaryTree(depth: number = 5): Promise<BinaryTreeNode |
     const startTime = Date.now();
 
     const response = await apiRequest<{ success: boolean; tree: BinaryTreeNode | null; message?: string }>(
-      `/api/genealogy/tree?depth=${depth}`
+      `/genealogy/tree?depth=${depth}`
     );
 
     const loadTime = Date.now() - startTime;
@@ -163,7 +163,7 @@ export async function getAvailablePositions(parentId: string): Promise<Available
     console.log(`🔍 [Genealogy] Checking available positions under ${parentId}...`);
 
     const response = await apiRequest<AvailablePositionsResponse>(
-      `/api/genealogy/available-positions/${parentId}`
+      `/genealogy/available-positions/${parentId}`
     );
 
     console.log(`✅ [Genealogy] Available positions:`, response.availablePositions);
