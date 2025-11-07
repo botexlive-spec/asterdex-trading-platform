@@ -1,22 +1,10 @@
 /**
  * Admin Financial Service
  * Handles deposits, withdrawals, and financial operations
+ * Uses Express MySQL backend API
  */
 
-import { supabase } from './supabase.client';
 import { requireAdmin } from '../middleware/admin.middleware';
-
-/**
- * Helper function to safely execute database queries
- */
-const safeQuery = async <T>(queryFn: () => Promise<T>, defaultValue: T): Promise<T> => {
-  try {
-    return await queryFn();
-  } catch (error) {
-    console.warn('Query failed, using default:', error);
-    return defaultValue;
-  }
-};
 
 export interface Deposit {
   id: string;
@@ -61,6 +49,49 @@ export interface FinancialStats {
 }
 
 /**
+ * Get API base URL
+ */
+const getApiUrl = (): string => {
+  return import.meta.env.VITE_API_URL || 'http://localhost:3001';
+};
+
+/**
+ * Get authentication token from storage
+ */
+const getAuthToken = (): string | null => {
+  return localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+};
+
+/**
+ * Make authenticated API request
+ */
+const apiRequest = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
+  const token = getAuthToken();
+
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+
+  const url = `${getApiUrl()}${endpoint}`;
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `API request failed: ${response.status}`);
+  }
+
+  return response.json();
+};
+
+/**
  * Get all deposits with filters
  */
 export const getAllDeposits = async (filters?: {
@@ -70,44 +101,15 @@ export const getAllDeposits = async (filters?: {
   date_to?: string;
 }): Promise<Deposit[]> => {
   try {
-    // Verify admin access
     await requireAdmin();
 
-    // Use safe query to handle missing table
-    return await safeQuery(async () => {
-      let query = supabase
-        .from('deposits')
-        .select(`
-          *,
-          user:users!user_id(
-            id,
-            full_name,
-            email
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (filters?.status && filters.status !== 'all') {
-        query = query.eq('status', filters.status);
-      }
-
-      if (filters?.date_from) {
-        query = query.gte('created_at', filters.date_from);
-      }
-
-      if (filters?.date_to) {
-        query = query.lte('created_at', filters.date_to);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      return data || [];
-    }, []);
+    // TODO: Create backend endpoint for deposits
+    // For now, return empty array as deposits table doesn't exist
+    console.warn('getAllDeposits not implemented - deposits table does not exist');
+    return [];
   } catch (error: any) {
     console.error('Error getting deposits:', error);
-    return []; // Return empty array instead of throwing
+    return [];
   }
 };
 
@@ -121,45 +123,15 @@ export const getAllWithdrawals = async (filters?: {
   date_to?: string;
 }): Promise<Withdrawal[]> => {
   try {
-    // Verify admin access
     await requireAdmin();
 
-    // Use safe query to handle missing table
-    return await safeQuery(async () => {
-      let query = supabase
-        .from('withdrawal_requests')
-        .select(`
-          *,
-          user:users!user_id(
-            id,
-            full_name,
-            email,
-            kyc_status
-          )
-        `)
-        .order('created_at', { ascending: false});
-
-      if (filters?.status && filters.status !== 'all') {
-        query = query.eq('status', filters.status);
-      }
-
-      if (filters?.date_from) {
-        query = query.gte('created_at', filters.date_from);
-      }
-
-      if (filters?.date_to) {
-        query = query.lte('created_at', filters.date_to);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      return data || [];
-    }, []);
+    // TODO: Create backend endpoint for withdrawals
+    // For now, return empty array as withdrawals table doesn't exist
+    console.warn('getAllWithdrawals not implemented - withdrawals table does not exist');
+    return [];
   } catch (error: any) {
     console.error('Error getting withdrawals:', error);
-    return []; // Return empty array instead of throwing
+    return [];
   }
 };
 
@@ -169,84 +141,16 @@ export const getAllWithdrawals = async (filters?: {
 export const approveDeposit = async (
   depositId: string,
   notes?: string
-): Promise<void> => {
+): Promise<{ success: boolean; message: string }> => {
   try {
-        // Verify admin access
     await requireAdmin();
 
-const { data: { user: admin }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!admin) throw new Error('Admin not authenticated');
-
-    // Get deposit details
-    const { data: deposit, error: depositError } = await supabase
-      .from('deposits')
-      .select('*, user:users!user_id(wallet_balance)')
-      .eq('id', depositId)
-      .single();
-
-    if (depositError) throw depositError;
-    if (!deposit) throw new Error('Deposit not found');
-
-    if (deposit.status !== 'pending') {
-      throw new Error('Deposit has already been processed');
-    }
-
-    // Update deposit status
-    const { error: updateError } = await supabase
-      .from('deposits')
-      .update({
-        status: 'approved',
-        notes,
-        processed_by: admin.id,
-        processed_at: new Date().toISOString(),
-      })
-      .eq('id', depositId);
-
-    if (updateError) throw updateError;
-
-    // Get user's current wallet balance
-    const { data: walletData, error: walletError } = await supabase
-      .from('wallets')
-      .select('available_balance, total_balance')
-      .eq('user_id', deposit.user_id)
-      .single();
-
-    if (walletError) throw walletError;
-
-    // Update user wallet balance
-    await supabase
-      .from('wallets')
-      .update({
-        available_balance: (walletData.available_balance || 0) + deposit.amount,
-        total_balance: (walletData.total_balance || 0) + deposit.amount,
-      })
-      .eq('user_id', deposit.user_id);
-
-    // Create transaction record
-    await supabase.from('mlm_transactions').insert({
-      user_id: deposit.user_id,
-      transaction_type: 'deposit',
-      amount: deposit.amount,
-      status: 'completed',
-      metadata: {
-        deposit_id: depositId,
-        method: deposit.method,
-        approved_by: admin.id,
-        notes,
-      },
-    });
-
-    // Log admin action
-    await supabase.from('admin_actions').insert({
-      user_id: deposit.user_id,
-      admin_id: admin.id,
-      action: 'approve_deposit',
-      metadata: { deposit_id: depositId, amount: deposit.amount },
-    });
+    // TODO: Create backend endpoint for deposit approval
+    console.warn('approveDeposit not implemented yet');
+    return { success: false, message: 'Deposits feature not implemented' };
   } catch (error: any) {
     console.error('Error approving deposit:', error);
-    throw new Error(error.message || 'Failed to approve deposit');
+    throw error;
   }
 };
 
@@ -256,52 +160,16 @@ const { data: { user: admin }, error: authError } = await supabase.auth.getUser(
 export const rejectDeposit = async (
   depositId: string,
   reason: string
-): Promise<void> => {
+): Promise<{ success: boolean; message: string }> => {
   try {
-        // Verify admin access
     await requireAdmin();
 
-const { data: { user: admin }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!admin) throw new Error('Admin not authenticated');
-
-    // Get deposit details
-    const { data: deposit, error: depositError } = await supabase
-      .from('deposits')
-      .select('*')
-      .eq('id', depositId)
-      .single();
-
-    if (depositError) throw depositError;
-    if (!deposit) throw new Error('Deposit not found');
-
-    if (deposit.status !== 'pending') {
-      throw new Error('Deposit has already been processed');
-    }
-
-    // Update deposit status
-    const { error: updateError } = await supabase
-      .from('deposits')
-      .update({
-        status: 'rejected',
-        notes: reason,
-        processed_by: admin.id,
-        processed_at: new Date().toISOString(),
-      })
-      .eq('id', depositId);
-
-    if (updateError) throw updateError;
-
-    // Log admin action
-    await supabase.from('admin_actions').insert({
-      user_id: deposit.user_id,
-      admin_id: admin.id,
-      action: 'reject_deposit',
-      metadata: { deposit_id: depositId, reason },
-    });
+    // TODO: Create backend endpoint for deposit rejection
+    console.warn('rejectDeposit not implemented yet');
+    return { success: false, message: 'Deposits feature not implemented' };
   } catch (error: any) {
     console.error('Error rejecting deposit:', error);
-    throw new Error(error.message || 'Failed to reject deposit');
+    throw error;
   }
 };
 
@@ -311,66 +179,16 @@ const { data: { user: admin }, error: authError } = await supabase.auth.getUser(
 export const approveWithdrawal = async (
   withdrawalId: string,
   notes?: string
-): Promise<void> => {
+): Promise<{ success: boolean; message: string }> => {
   try {
-        // Verify admin access
     await requireAdmin();
 
-const { data: { user: admin }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!admin) throw new Error('Admin not authenticated');
-
-    // Get withdrawal details
-    const { data: withdrawal, error: withdrawalError } = await supabase
-      .from('withdrawal_requests')
-      .select('*')
-      .eq('id', withdrawalId)
-      .single();
-
-    if (withdrawalError) throw withdrawalError;
-    if (!withdrawal) throw new Error('Withdrawal not found');
-
-    if (withdrawal.status !== 'pending') {
-      throw new Error('Withdrawal has already been processed');
-    }
-
-    // Update withdrawal status
-    const { error: updateError } = await supabase
-      .from('withdrawal_requests')
-      .update({
-        status: 'approved',
-        notes,
-        processed_by: admin.id,
-        processed_at: new Date().toISOString(),
-      })
-      .eq('id', withdrawalId);
-
-    if (updateError) throw updateError;
-
-    // Create transaction record
-    await supabase.from('mlm_transactions').insert({
-      user_id: withdrawal.user_id,
-      transaction_type: 'withdrawal',
-      amount: -withdrawal.amount, // Negative for withdrawal
-      status: 'completed',
-      metadata: {
-        withdrawal_id: withdrawalId,
-        method: withdrawal.method,
-        approved_by: admin.id,
-        notes,
-      },
-    });
-
-    // Log admin action
-    await supabase.from('admin_actions').insert({
-      user_id: withdrawal.user_id,
-      admin_id: admin.id,
-      action: 'approve_withdrawal',
-      metadata: { withdrawal_id: withdrawalId, amount: withdrawal.amount },
-    });
+    // TODO: Create backend endpoint for withdrawal approval
+    console.warn('approveWithdrawal not implemented yet');
+    return { success: false, message: 'Withdrawals feature not implemented' };
   } catch (error: any) {
     console.error('Error approving withdrawal:', error);
-    throw new Error(error.message || 'Failed to approve withdrawal');
+    throw error;
   }
 };
 
@@ -380,70 +198,16 @@ const { data: { user: admin }, error: authError } = await supabase.auth.getUser(
 export const rejectWithdrawal = async (
   withdrawalId: string,
   reason: string
-): Promise<void> => {
+): Promise<{ success: boolean; message: string }> => {
   try {
-        // Verify admin access
     await requireAdmin();
 
-const { data: { user: admin }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!admin) throw new Error('Admin not authenticated');
-
-    // Get withdrawal details
-    const { data: withdrawal, error: withdrawalError } = await supabase
-      .from('withdrawal_requests')
-      .select('*')
-      .eq('id', withdrawalId)
-      .single();
-
-    if (withdrawalError) throw withdrawalError;
-    if (!withdrawal) throw new Error('Withdrawal not found');
-
-    if (withdrawal.status !== 'pending') {
-      throw new Error('Withdrawal has already been processed');
-    }
-
-    // Get user's current wallet balance
-    const { data: walletData, error: walletError } = await supabase
-      .from('wallets')
-      .select('available_balance, locked_balance')
-      .eq('user_id', withdrawal.user_id)
-      .single();
-
-    if (walletError) throw walletError;
-
-    // Return locked amount to available balance
-    await supabase
-      .from('wallets')
-      .update({
-        available_balance: (walletData.available_balance || 0) + withdrawal.amount,
-        locked_balance: Math.max(0, (walletData.locked_balance || 0) - withdrawal.amount),
-      })
-      .eq('user_id', withdrawal.user_id);
-
-    // Update withdrawal status
-    const { error: updateError } = await supabase
-      .from('withdrawal_requests')
-      .update({
-        status: 'rejected',
-        rejection_reason: reason,
-        processed_by: admin.id,
-        processed_at: new Date().toISOString(),
-      })
-      .eq('id', withdrawalId);
-
-    if (updateError) throw updateError;
-
-    // Log admin action
-    await supabase.from('admin_actions').insert({
-      user_id: withdrawal.user_id,
-      admin_id: admin.id,
-      action: 'reject_withdrawal',
-      metadata: { withdrawal_id: withdrawalId, reason },
-    });
+    // TODO: Create backend endpoint for withdrawal rejection
+    console.warn('rejectWithdrawal not implemented yet');
+    return { success: false, message: 'Withdrawals feature not implemented' };
   } catch (error: any) {
     console.error('Error rejecting withdrawal:', error);
-    throw new Error(error.message || 'Failed to reject withdrawal');
+    throw error;
   }
 };
 
@@ -452,39 +216,31 @@ const { data: { user: admin }, error: authError } = await supabase.auth.getUser(
  */
 export const getFinancialStats = async (): Promise<FinancialStats> => {
   try {
-    // Verify admin access
     await requireAdmin();
 
-    // Get deposits stats - safe query
-    const deposits = await safeQuery(async () => {
-      const { data } = await supabase
-        .from('deposits')
-        .select('status, amount');
-      return data || [];
-    }, []);
+    const data = await apiRequest<any>('/api/admin/analytics/overview');
 
-    // Get withdrawals stats - safe query
-    const withdrawals = await safeQuery(async () => {
-      const { data } = await supabase
-        .from('withdrawal_requests')
-        .select('status, amount');
-      return data || [];
-    }, []);
-
-    const stats: FinancialStats = {
-      total_deposits: deposits.length,
-      total_withdrawals: withdrawals.length,
-      pending_deposits: deposits.filter(d => d.status === 'pending').length,
-      pending_withdrawals: withdrawals.filter(w => w.status === 'pending').length,
-      total_deposits_amount: deposits.reduce((sum, d) => sum + (d.amount || 0), 0),
-      total_withdrawals_amount: withdrawals.reduce((sum, w) => sum + (w.amount || 0), 0),
-      pending_deposits_amount: deposits.filter(d => d.status === 'pending').reduce((sum, d) => sum + (d.amount || 0), 0),
-      pending_withdrawals_amount: withdrawals.filter(w => w.status === 'pending').reduce((sum, w) => sum + (w.amount || 0), 0),
+    return {
+      total_deposits: 0, // TODO: Calculate from deposits table when it exists
+      total_withdrawals: 0,
+      pending_deposits: 0,
+      pending_withdrawals: data.pending_withdrawals || 0,
+      total_deposits_amount: 0,
+      total_withdrawals_amount: data.total_withdrawals || 0,
+      pending_deposits_amount: 0,
+      pending_withdrawals_amount: data.pending_withdrawals_amount || 0,
     };
-
-    return stats;
   } catch (error: any) {
     console.error('Error getting financial stats:', error);
-    throw new Error(error.message || 'Failed to get financial stats');
+    return {
+      total_deposits: 0,
+      total_withdrawals: 0,
+      pending_deposits: 0,
+      pending_withdrawals: 0,
+      total_deposits_amount: 0,
+      total_withdrawals_amount: 0,
+      pending_deposits_amount: 0,
+      pending_withdrawals_amount: 0,
+    };
   }
 };

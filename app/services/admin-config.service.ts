@@ -3,7 +3,6 @@
  * Manage database-driven business rules and system settings
  */
 
-import { supabase } from './supabase.client';
 import { requireAdmin } from '../middleware/admin.middleware';
 
 // ============================================

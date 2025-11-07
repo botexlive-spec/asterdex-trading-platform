@@ -3,7 +3,7 @@
  * Handles identity verification, document uploads, and KYC status management
  */
 
-import { supabase } from './supabase.client';
+
 import {
   KYCSubmission,
   KYCSubmissionRequest,

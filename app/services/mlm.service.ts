@@ -3,7 +3,7 @@
  * Core MLM Business Logic and Calculations
  */
 
-import { supabase } from './supabase.client';
+
 import {
   Package,
   UserPackage,
@@ -720,6 +720,63 @@ const ensureUserProfile = async (authUser: any): Promise<any> => {
  */
 export const getUserDashboard = async (userId?: string): Promise<UserDashboardData> => {
   try {
+    // NEW: Use MySQL API instead of Supabase
+    const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+
+    if (token) {
+      console.log('🔍 getUserDashboard - Using MySQL API');
+
+      const response = await fetch('http://localhost:3001/api/dashboard', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Dashboard data from MySQL:', data);
+
+        return {
+          user: {
+            id: data.user.id,
+            email: data.user.email,
+            full_name: data.user.full_name,
+            wallet_balance: data.user.wallet_balance || 0,
+            total_investment: data.user.total_investment || 0,
+            total_earnings: data.user.total_earnings || 0,
+            direct_count: data.statistics.direct_referrals || 0,
+            team_count: data.statistics.total_team || 0,
+            current_rank: data.user.current_rank || 'bronze',
+            robot_subscription_active: false,
+            robot_subscription_expires_at: null,
+            kyc_status: 'pending',
+            levels_unlocked: 30,
+          },
+          statistics: {
+            today_earnings: data.statistics.today_earnings || 0,
+            week_earnings: data.statistics.week_earnings || 0,
+            month_earnings: data.statistics.month_earnings || 0,
+            left_volume: data.statistics.left_binary_volume || 0,
+            right_volume: data.statistics.right_binary_volume || 0,
+            total_volume: (data.statistics.left_binary_volume || 0) + (data.statistics.right_binary_volume || 0),
+            roi_earned: data.statistics.roi_earned || 0,
+          },
+          recent_transactions: [],
+          active_packages: [],
+          direct_referrals: [],
+          notifications: [],
+          next_rank: {
+            rank: data.next_rank.next || 'platinum',
+            min_volume: 100000,
+            reward_amount: 5000,
+            levels_unlocked: 30,
+          },
+        };
+      }
+    }
+
+    // Fallback to Supabase (original code below)
     // Use provided userId or get from auth
     let targetUserId = userId;
     let authUser = null;
@@ -742,14 +799,10 @@ export const getUserDashboard = async (userId?: string): Promise<UserDashboardDa
       .single();
 
     if (userError || !userData) {
-      // If user doesn't exist and we have authUser, auto-create
-      if (authUser) {
-        console.log('⚠️  User not found in public.users, auto-creating...');
-        const createdUser = await ensureUserProfile(authUser);
-        console.log('✅ User profile created:', createdUser.email);
-      } else {
-        throw new Error(`User not found: ${targetUserId}`);
-      }
+      // NOTE: With local PostgreSQL, all users should already exist in the database
+      // Auto-creation is disabled since we manage users directly
+      console.error('❌ User not found:', targetUserId);
+      throw new Error(`User not found: ${targetUserId}. Please ensure user exists in database.`);
     } else {
       console.log('✅ User profile found:', userData.email);
     }

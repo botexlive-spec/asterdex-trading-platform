@@ -1,0 +1,31 @@
+PostgreSQL Installation Steps
+
+1. Download PostgreSQL 15:
+   https://www.postgresql.org/download/windows/
+
+2. Click "Download the installer"
+
+3. Select: postgresql-15.x-windows-x64.exe
+
+4. Run installer as Administrator
+
+5. Installation Settings:
+   - Installation Directory: C:\Program Files\PostgreSQL\15
+   - Components: Select all (PostgreSQL Server, pgAdmin 4, Command Line Tools)
+   - Data Directory: Default
+   - Password: postgres123 (REMEMBER THIS!)
+   - Port: 5432
+   - Locale: Default
+
+6. After installation completes, click Finish
+
+Then run these commands:
+
+cd C:\Projects\asterdex-8621-main
+setup-database.bat
+
+(Enter password: postgres123 when prompted)
+
+Then:
+
+npm run dev:all

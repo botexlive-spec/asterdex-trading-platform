@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { User, UserRole, AuthState, LoginCredentials, AuthResponse } from '../types/auth.types';
 import toast from 'react-hot-toast';
-import { getImpersonationStatus, getImpersonatedUserData } from '../services/admin-impersonate.service';
+import * as authService from '../services/auth.service';
+import { setAuthContextRef } from '../middleware/admin.middleware';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
@@ -28,143 +29,106 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [actualUser, setActualUser] = useState<User | null>(null);
+  const isCheckingAuth = useRef(false);
 
-  // Load auth state from localStorage on mount
+  // Create a ref that holds the current context value for middleware access
+  const contextValueRef = useRef<AuthContextType | null>(null);
+
+  // Load auth state from localStorage on mount - NO DEPENDENCIES to prevent loops
   const checkAuth = useCallback(async () => {
+    // Prevent multiple simultaneous checks
+    if (isCheckingAuth.current) {
+      console.log('⏭️ Skipping checkAuth - already in progress');
+      return;
+    }
+
+    isCheckingAuth.current = true;
+
     try {
-      const token = localStorage.getItem('token');
-      const userStr = localStorage.getItem('user');
-      const refreshToken = localStorage.getItem('refreshToken');
+      const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+      const userStr = localStorage.getItem('user') || sessionStorage.getItem('user');
+      const refreshToken = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token'); // Use same token for refresh
 
       if (token && userStr) {
+        console.log('✅ Found stored auth token, verifying...');
         const user = JSON.parse(userStr) as User;
 
-        // Check if impersonating
-        const impersonationStatus = getImpersonationStatus();
-
-        if (impersonationStatus.isImpersonating) {
-          // Admin is impersonating a user
-          setActualUser(user); // Store the actual admin user
-          setIsImpersonating(true);
-
-          // Load the impersonated user's data with timeout
-          const impersonatedUser = await Promise.race([
-            getImpersonatedUserData(),
-            new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)) // 5 second timeout
-          ]);
-
-          if (impersonatedUser) {
-            // Override the user with impersonated user data, but keep admin token
-            setAuthState({
-              user: impersonatedUser as User,
-              token,
-              refreshToken,
-              isAuthenticated: true,
-              isLoading: false,
-              error: null,
-            });
-          } else {
-            // Failed to load impersonated user, use normal flow
-            setIsImpersonating(false);
-            setActualUser(null);
-            setAuthState({
-              user,
-              token,
-              refreshToken,
-              isAuthenticated: true,
-              isLoading: false,
-              error: null,
-            });
+        // Check for impersonation
+        const impersonationStr = localStorage.getItem('impersonation');
+        if (impersonationStr) {
+          try {
+            const impersonationData = JSON.parse(impersonationStr);
+            if (impersonationData.isImpersonating && impersonationData.actualUser) {
+              setActualUser(impersonationData.actualUser);
+              setIsImpersonating(true);
+              console.log('👥 Impersonation mode detected');
+            }
+          } catch (e) {
+            console.error('Failed to parse impersonation data:', e);
           }
-        } else {
-          // Normal authentication
-          setIsImpersonating(false);
-          setActualUser(null);
-          setAuthState({
-            user,
-            token,
-            refreshToken,
-            isAuthenticated: true,
-            isLoading: false,
-            error: null,
-          });
         }
+
+        // Set auth state
+        setAuthState({
+          user,
+          token,
+          refreshToken,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+        });
       } else {
+        console.log('ℹ️ No stored auth credentials');
         setAuthState(prev => ({ ...prev, isLoading: false }));
       }
     } catch (error) {
-      console.error('Auth check error:', error);
-      localStorage.clear();
+      console.error('❌ Auth check error:', error);
+      // Clear potentially corrupt data
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
       setAuthState(prev => ({ ...prev, isLoading: false }));
+    } finally {
+      isCheckingAuth.current = false;
     }
-  }, []);
+  }, []); // EMPTY DEPS - only runs once on mount
 
   useEffect(() => {
+    console.log('🔐 AuthProvider mounted - checking auth');
     checkAuth();
-  }, [checkAuth]);
+  }, []); // EMPTY DEPS - only runs once on mount
 
   const login = async (email: string, password: string) => {
+    // Prevent multiple simultaneous login requests
+    if (authState.isLoading) {
+      console.log('⏭️ Login already in progress, skipping...');
+      return;
+    }
+
     try {
+      console.log('🔐 Starting login for:', email);
       setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
 
-      // TODO: Replace with actual API call
-      // For now, mock login based on email
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call REAL API using auth.service.ts
+      const response: AuthResponse = await authService.signIn({ email, password });
 
-      const isAdmin = email.includes('admin');
+      console.log('✅ API login successful:', response.user.email, 'Role:', response.user.role);
 
-      // Map emails to real database UUIDs
-      let userId: string;
-      if (email === 'admin@asterdex.com' || email === 'admin@finaster.com') {
-        userId = 'e1973e19-ec82-4149-bd6e-1cb19336d502';
-      } else if (email === 'user@asterdex.com') {
-        userId = '1a78f252-4059-4e10-afcf-238254359eb8';
-      } else if (email === 'user@finaster.com') {
-        userId = '4a6ee960-ddf0-4daf-a029-e2e5a13d8f87'; // Real UUID from database
-      } else {
-        userId = crypto.randomUUID();
-      }
-
-      const mockUser: User = {
-        id: userId,
-        email,
-        fullName: isAdmin ? 'Admin User' : 'John Doe',
-        full_name: isAdmin ? 'Admin User' : 'John Doe',
-        role: isAdmin ? UserRole.ADMIN : UserRole.USER,
-        userId: isAdmin ? 'ADM001' : 'USR12345',
-        avatar: undefined,
-        phone: undefined,
-        is_active: true,
-        isActive: true,
-        email_verified: true,
-        kycStatus: 'approved',
-        twoFAEnabled: false,
-        rank: isAdmin ? undefined : 'Bronze',
-        sponsorId: undefined,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-      };
-
-      const mockToken = 'mock-jwt-token-' + Math.random().toString(36).substring(7);
-      const mockRefreshToken = 'mock-refresh-token-' + Math.random().toString(36).substring(7);
-
-      // Save to localStorage
-      localStorage.setItem('token', mockToken);
-      localStorage.setItem('refreshToken', mockRefreshToken);
-      localStorage.setItem('user', JSON.stringify(mockUser));
+      // Save to localStorage (consistent key: 'auth_token')
+      localStorage.setItem('auth_token', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
 
       setAuthState({
-        user: mockUser,
-        token: mockToken,
-        refreshToken: mockRefreshToken,
+        user: response.user,
+        token: response.token,
+        refreshToken: response.refreshToken || response.token,
         isAuthenticated: true,
         isLoading: false,
         error: null,
       });
 
-      toast.success(`Welcome ${mockUser.fullName}!`);
+      toast.success(`Welcome ${response.user.fullName || response.user.full_name || response.user.email}!`);
     } catch (error: any) {
+      console.error('❌ Login error:', error);
       const errorMessage = error.message || 'Login failed';
       setAuthState(prev => ({
         ...prev,
@@ -176,25 +140,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    localStorage.removeItem('impersonation'); // Clear impersonation data
+  const logout = useCallback(async () => {
+    try {
+      console.log('🚪 Logging out...');
 
-    setAuthState({
-      user: null,
-      token: null,
-      refreshToken: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-    });
+      // Call API logout endpoint
+      await authService.signOut();
 
-    setIsImpersonating(false);
-    setActualUser(null);
+      // Clear all auth data from storage
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('impersonation');
 
-    toast.success('Logged out successfully');
+      sessionStorage.removeItem('auth_token');
+      sessionStorage.removeItem('user');
+
+      setAuthState({
+        user: null,
+        token: null,
+        refreshToken: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: null,
+      });
+
+      setIsImpersonating(false);
+      setActualUser(null);
+
+      console.log('✅ Logout complete');
+      toast.success('Logged out successfully');
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      // Still clear local data even if API call fails
+      localStorage.clear();
+      sessionStorage.clear();
+      toast.error('Logout failed, but local session cleared');
+    }
   }, []);
 
   // When impersonating, actualUser holds the admin, authState.user holds the impersonated user
@@ -219,20 +200,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
+  // Build the context value
+  const contextValue: AuthContextType = {
+    ...authState,
+    login,
+    logout,
+    isAdmin,
+    isUser,
+    hasPermission,
+    checkAuth,
+    isImpersonating,
+    actualUser,
+  };
+
+  // Update the ref and notify middleware whenever context value changes
+  useEffect(() => {
+    contextValueRef.current = contextValue;
+    setAuthContextRef(contextValue);
+    console.log('🔄 [AuthContext] Context updated:', {
+      isAuthenticated: contextValue.isAuthenticated,
+      userEmail: contextValue.user?.email,
+      userRole: contextValue.user?.role
+    });
+  }, [contextValue.isAuthenticated, contextValue.user]);
+
   return (
-    <AuthContext.Provider
-      value={{
-        ...authState,
-        login,
-        logout,
-        isAdmin,
-        isUser,
-        hasPermission,
-        checkAuth,
-        isImpersonating,
-        actualUser,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

@@ -3,7 +3,6 @@
  * Generate comprehensive reports from database
  */
 
-import { supabase } from './supabase.client';
 import { format, subDays, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { requireAdmin } from '../middleware/admin.middleware';
 

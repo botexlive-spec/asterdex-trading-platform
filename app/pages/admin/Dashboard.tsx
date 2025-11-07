@@ -247,7 +247,7 @@ const AdminDashboard: React.FC = () => {
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-3">Database Setup Required</h2>
               <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-                Welcome to your Finaster MLM Platform! To start using the admin dashboard, you need to deploy the database files to Supabase first.
+                Welcome to your Finaster MLM Platform! To start using the admin dashboard, ensure your MySQL database is properly configured.
               </p>
 
               <div className="bg-white rounded-lg p-6 mb-6 text-left max-w-2xl mx-auto">
@@ -257,15 +257,15 @@ const AdminDashboard: React.FC = () => {
                 <ol className="space-y-3 text-gray-700">
                   <li className="flex gap-3">
                     <span className="font-semibold text-blue-600">1.</span>
-                    <span>Open the <code className="bg-gray-100 px-2 py-1 rounded text-sm">SUPABASE_DEPLOYMENT_GUIDE.md</code> file in your project</span>
+                    <span>Ensure MySQL server is running on your system</span>
                   </li>
                   <li className="flex gap-3">
                     <span className="font-semibold text-blue-600">2.</span>
-                    <span>Go to your Supabase Dashboard → SQL Editor</span>
+                    <span>Check your <code className="bg-gray-100 px-2 py-1 rounded text-sm">.env</code> file for correct MySQL credentials</span>
                   </li>
                   <li className="flex gap-3">
                     <span className="font-semibold text-blue-600">3.</span>
-                    <span>Copy and run the <code className="bg-gray-100 px-2 py-1 rounded text-sm">database/DEPLOY_ALL_IN_ONE.sql</code> file</span>
+                    <span>Verify the backend server is running at <code className="bg-gray-100 px-2 py-1 rounded text-sm">http://localhost:3001</code></span>
                   </li>
                   <li className="flex gap-3">
                     <span className="font-semibold text-blue-600">4.</span>
@@ -281,14 +281,6 @@ const AdminDashboard: React.FC = () => {
                 >
                   🔄 Try Again
                 </Button>
-                <a
-                  href="https://app.supabase.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
-                >
-                  🚀 Open Supabase Dashboard
-                </a>
               </div>
 
               <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">

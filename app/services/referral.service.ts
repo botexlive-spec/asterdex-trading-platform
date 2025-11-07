@@ -3,7 +3,7 @@
  * Handles all referral marketing-related API calls
  */
 
-import { supabase } from './supabase.client';
+
 import {
   ReferralCode,
   Referral,

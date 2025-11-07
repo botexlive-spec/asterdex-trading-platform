@@ -3,7 +3,7 @@
  * Complete wallet operations: deposits, withdrawals, transfers, transactions
  */
 
-import { supabase } from './supabase.client';
+
 
 // ============================================
 // TYPES & INTERFACES

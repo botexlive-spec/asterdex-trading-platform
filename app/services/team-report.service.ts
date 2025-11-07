@@ -1,11 +1,11 @@
 /**
- * Team Report Service
+ * Team Report Service - MySQL Backend API
  * Handles team structure reporting with level-wise breakdown
  * Distinguishes between Direct Members (Level 1) and Total Team (All Levels)
+ * NO SUPABASE - Pure MySQL API
  */
 
-import { supabase } from './supabase.client';
-import { getTeamMembers } from './mlm.service';
+import * as teamService from './team.service';
 
 export interface TeamMemberDetail {
   id: string;
@@ -45,240 +45,86 @@ export interface TeamReportData {
 }
 
 /**
- * Build team tree recursively to get all downline members with their levels
- */
-async function buildTeamTree(
-  userId: string,
-  currentLevel: number = 1,
-  maxLevel: number = 30,
-  visited: Set<string> = new Set()
-): Promise<Map<number, TeamMemberDetail[]>> {
-  const levelMap = new Map<number, TeamMemberDetail[]>();
-
-  if (currentLevel > maxLevel || visited.has(userId)) {
-    return levelMap;
-  }
-
-  visited.add(userId);
-
-  // Get direct referrals at this level
-  console.log(`🔍 Level ${currentLevel}: Querying users where sponsor_id = ${userId.substring(0, 8)}...`);
-
-  const { data: directMembers, error } = await supabase
-    .from('users')
-    .select(`
-      id,
-      full_name,
-      email,
-      created_at,
-      total_investment,
-      wallet_balance,
-      is_active,
-      current_rank,
-      kyc_status,
-      sponsor_id,
-      direct_count,
-      team_count
-    `)
-    .eq('sponsor_id', userId)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error(`❌ Error fetching level ${currentLevel}:`, error);
-    return levelMap;
-  }
-
-  console.log(`📊 Level ${currentLevel}: Found ${directMembers?.length || 0} members`);
-
-  if (!directMembers || directMembers.length === 0) {
-    return levelMap;
-  }
-
-  directMembers.forEach(member => {
-    console.log(`  - ${member.full_name} (${member.email})`);
-  });
-
-  // Add current level members
-  const membersWithLevel = directMembers.map(member => ({
-    ...member,
-    level: currentLevel,
-    total_investment: member.total_investment || 0,
-    wallet_balance: member.wallet_balance || 0,
-    current_rank: member.current_rank || 'starter',
-  }));
-
-  levelMap.set(currentLevel, membersWithLevel);
-
-  // Recursively get deeper levels
-  for (const member of directMembers) {
-    const subTree = await buildTeamTree(member.id, currentLevel + 1, maxLevel, visited);
-
-    // Merge subtree into main level map
-    subTree.forEach((members, level) => {
-      const existing = levelMap.get(level) || [];
-      levelMap.set(level, [...existing, ...members]);
-    });
-  }
-
-  return levelMap;
-}
-
-/**
- * Get sponsor name for a member
- */
-async function getSponsorName(sponsorId: string): Promise<string> {
-  const { data, error } = await supabase
-    .from('users')
-    .select('full_name')
-    .eq('id', sponsorId)
-    .single();
-
-  if (error || !data) return 'Unknown';
-  return data.full_name;
-}
-
-/**
  * Get comprehensive team report with level-wise breakdown
- * Uses MLM service to get team members (same as "My Team" page)
+ * Uses MySQL backend API (same data source as "My Team")
  */
 export const getTeamReport = async (): Promise<TeamReportData> => {
   try {
-    // Get current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!user) throw new Error('User not authenticated');
+    console.log('📊 [Team Report] Fetching team data from MySQL API...');
+    const startTime = Date.now();
 
-    console.log('📊 Building team report for user:', user.id);
+    // Get all team members from MySQL API
+    const teamData = await teamService.getTeamMembers();
 
-    // Get team members using MLM service (same as "My Team" page)
-    const teamMembers = await getTeamMembers(user.id);
-    console.log(`✅ Found ${teamMembers.length} team members from MLM service`);
+    const loadTime = Date.now() - startTime;
+    console.log(`✅ [Team Report] Data loaded in ${loadTime}ms`);
 
-    // Group members by level
-    const levelMap = new Map<number, TeamMemberDetail[]>();
-    let totalInvestment = 0;
-    let totalBalance = 0;
+    // Build level stats from the data
+    const levels: LevelStats[] = teamData.levels.map((levelData) => ({
+      level: levelData.level,
+      member_count: levelData.count,
+      percentage: teamData.summary.total_team > 0
+        ? (levelData.count / teamData.summary.total_team) * 100
+        : 0,
+      total_investment: levelData.total_investment,
+      total_balance: levelData.total_earnings, // Using earnings as balance proxy
+      active_count: levelData.active,
+      inactive_count: levelData.inactive,
+    }));
 
-    for (const member of teamMembers) {
-      const level = member.level || 1;
-
-      // Convert MLM member format to TeamMemberDetail format
-      const teamMember: TeamMemberDetail = {
-        id: member.id,
-        full_name: member.name,
-        email: member.email,
-        created_at: member.joinDate,
-        total_investment: member.totalInvestment || 0,
-        wallet_balance: 0, // Not available in MLM service, would need separate query
-        is_active: member.status === 'active',
-        current_rank: 'starter', // Not available in MLM service
-        kyc_status: 'not_submitted', // Not available in MLM service
-        sponsor_id: member.parentId || '',
-        direct_count: member.directReferrals || 0,
-        team_count: member.teamSize || 0,
-        level: level,
-      };
-
-      const existing = levelMap.get(level) || [];
-      levelMap.set(level, [...existing, teamMember]);
-
-      totalInvestment += member.totalInvestment || 0;
-    }
-
-    // Calculate statistics per level
-    const levels: LevelStats[] = [];
-    const sortedLevels = Array.from(levelMap.keys()).sort((a, b) => a - b);
-    const totalMembers = teamMembers.length;
-    const maxDepth = sortedLevels.length > 0 ? Math.max(...sortedLevels) : 0;
-
-    for (const level of sortedLevels) {
-      const members = levelMap.get(level) || [];
-      const activeCount = members.filter(m => m.is_active).length;
-      const levelInvestment = members.reduce((sum, m) => sum + (m.total_investment || 0), 0);
-      const levelBalance = members.reduce((sum, m) => sum + (m.wallet_balance || 0), 0);
-
-      levels.push({
-        level,
-        member_count: members.length,
-        percentage: totalMembers > 0 ? (members.length / totalMembers) * 100 : 0,
-        total_investment: levelInvestment,
-        total_balance: levelBalance,
-        active_count: activeCount,
-        inactive_count: members.length - activeCount,
-      });
-
-      totalBalance += levelBalance;
-    }
-
-    // Count direct members (Level 1)
-    const directMembersCount = levels.find(l => l.level === 1)?.member_count || 0;
-
-    console.log(`✅ Team report built: ${directMembersCount} direct, ${totalMembers} total, ${maxDepth} levels deep`);
-
-    return {
-      direct_members_count: directMembersCount,
-      total_team_count: totalMembers,
-      total_investment: totalInvestment,
-      total_balance: totalBalance,
+    const report: TeamReportData = {
+      direct_members_count: teamData.summary.direct_members,
+      total_team_count: teamData.summary.total_team,
+      total_investment: teamData.summary.total_investment,
+      total_balance: teamData.summary.total_earnings,
       levels,
-      max_depth: maxDepth,
+      max_depth: teamData.summary.max_depth,
     };
+
+    console.log(`✅ [Team Report] Built report:`, {
+      direct: report.direct_members_count,
+      total: report.total_team_count,
+      levels: report.max_depth,
+    });
+
+    return report;
   } catch (error: any) {
-    console.error('Error generating team report:', error);
+    console.error('❌ [Team Report] Error generating report:', error);
     throw new Error(error.message || 'Failed to generate team report');
   }
 };
 
 /**
  * Get detailed members for a specific level
- * Uses MLM service to get team members
+ * Uses MySQL backend API
  */
 export const getLevelMembers = async (level: number): Promise<TeamMemberDetail[]> => {
   try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!user) throw new Error('User not authenticated');
+    console.log(`📋 [Team Report] Fetching level ${level} members...`);
 
-    console.log(`📋 Fetching level ${level} members for user:`, user.id);
+    const members = await teamService.getTeamMembersByLevel(level);
 
-    // Get all team members from MLM service
-    const teamMembers = await getTeamMembers(user.id);
+    // Convert to TeamMemberDetail format
+    const detailedMembers: TeamMemberDetail[] = members.map((member) => ({
+      id: member.id,
+      full_name: member.full_name,
+      email: member.email,
+      created_at: member.created_at,
+      total_investment: member.total_investment,
+      wallet_balance: member.wallet_balance,
+      is_active: member.is_active,
+      current_rank: member.current_rank,
+      kyc_status: member.kyc_status,
+      sponsor_id: member.sponsor_id,
+      direct_count: 0, // Not calculated per member in this view
+      team_count: 0, // Not calculated per member in this view
+      level: member.level,
+    }));
 
-    // Filter members for the requested level
-    const levelMembers = teamMembers
-      .filter(member => member.level === level)
-      .map(member => ({
-        id: member.id,
-        full_name: member.name,
-        email: member.email,
-        created_at: member.joinDate,
-        total_investment: member.totalInvestment || 0,
-        wallet_balance: 0,
-        is_active: member.status === 'active',
-        current_rank: 'starter',
-        kyc_status: 'not_submitted',
-        sponsor_id: member.parentId || '',
-        direct_count: member.directReferrals || 0,
-        team_count: member.teamSize || 0,
-        level: member.level || 1,
-      }));
-
-    // Enrich with sponsor names
-    const enrichedMembers = await Promise.all(
-      levelMembers.map(async (member) => {
-        const sponsor_name = member.sponsor_id ? await getSponsorName(member.sponsor_id) : undefined;
-        return {
-          ...member,
-          sponsor_name,
-        };
-      })
-    );
-
-    console.log(`✅ Found ${enrichedMembers.length} members at level ${level}`);
-
-    return enrichedMembers;
+    console.log(`✅ [Team Report] Found ${detailedMembers.length} members at level ${level}`);
+    return detailedMembers;
   } catch (error: any) {
-    console.error(`Error fetching level ${level} members:`, error);
+    console.error(`❌ [Team Report] Error fetching level ${level} members:`, error);
     throw new Error(error.message || `Failed to fetch level ${level} members`);
   }
 };
@@ -288,42 +134,30 @@ export const getLevelMembers = async (level: number): Promise<TeamMemberDetail[]
  */
 export const getDirectMembers = async (): Promise<TeamMemberDetail[]> => {
   try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!user) throw new Error('User not authenticated');
+    console.log('📋 [Team Report] Fetching direct members...');
 
-    const { data: directMembers, error } = await supabase
-      .from('users')
-      .select(`
-        id,
-        full_name,
-        email,
-        created_at,
-        total_investment,
-        wallet_balance,
-        is_active,
-        current_rank,
-        kyc_status,
-        sponsor_id,
-        direct_count,
-        team_count
-      `)
-      .eq('sponsor_id', user.id)
-      .order('created_at', { ascending: false });
+    const members = await teamService.getDirectReferrals();
 
-    if (error) throw error;
-
-    const members = (directMembers || []).map(member => ({
-      ...member,
+    const detailedMembers: TeamMemberDetail[] = members.map((member) => ({
+      id: member.id,
+      full_name: member.full_name,
+      email: member.email,
+      created_at: member.created_at,
+      total_investment: member.total_investment,
+      wallet_balance: member.wallet_balance,
+      is_active: member.is_active,
+      current_rank: member.current_rank,
+      kyc_status: member.kyc_status,
+      sponsor_id: member.sponsor_id,
+      direct_count: 0,
+      team_count: 0,
       level: 1,
-      total_investment: member.total_investment || 0,
-      wallet_balance: member.wallet_balance || 0,
-      current_rank: member.current_rank || 'starter',
     }));
 
-    return members;
+    console.log(`✅ [Team Report] Found ${detailedMembers.length} direct members`);
+    return detailedMembers;
   } catch (error: any) {
-    console.error('Error fetching direct members:', error);
+    console.error('❌ [Team Report] Error fetching direct members:', error);
     throw new Error(error.message || 'Failed to fetch direct members');
   }
 };
@@ -333,30 +167,14 @@ export const getDirectMembers = async (): Promise<TeamMemberDetail[]> => {
  */
 export const exportLevelReport = async (level: number): Promise<string> => {
   try {
-    const members = await getLevelMembers(level);
+    console.log(`📥 [Team Report] Exporting level ${level} report...`);
 
-    // Generate CSV
-    const headers = ['Name', 'Email', 'Joined', 'Investment', 'Balance', 'Status', 'Rank', 'KYC', 'Sponsor'];
-    const rows = members.map(m => [
-      m.full_name,
-      m.email,
-      new Date(m.created_at).toLocaleDateString(),
-      `$${m.total_investment.toLocaleString()}`,
-      `$${m.wallet_balance.toLocaleString()}`,
-      m.is_active ? 'Active' : 'Inactive',
-      m.current_rank,
-      m.kyc_status,
-      m.sponsor_name || 'N/A',
-    ]);
+    const csv = await teamService.exportTeamReport(level);
 
-    const csv = [
-      headers.join(','),
-      ...rows.map(row => row.join(','))
-    ].join('\n');
-
+    console.log(`✅ [Team Report] Export complete`);
     return csv;
   } catch (error: any) {
-    console.error(`Error exporting level ${level} report:`, error);
+    console.error(`❌ [Team Report] Error exporting level ${level} report:`, error);
     throw new Error(error.message || `Failed to export level ${level} report`);
   }
 };

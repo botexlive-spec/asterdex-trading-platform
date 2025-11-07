@@ -1,0 +1,154 @@
+{
+  "passed": 21,
+  "failed": 0,
+  "warnings": 0,
+  "tests": [
+    {
+      "name": "Admin Login",
+      "status": "PASS",
+      "message": "Successfully authenticated with admin credentials",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.242Z"
+    },
+    {
+      "name": "User Login",
+      "status": "PASS",
+      "message": "Successfully authenticated with user credentials",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.343Z"
+    },
+    {
+      "name": "Dashboard Structure",
+      "status": "PASS",
+      "message": "All required sections present",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.389Z"
+    },
+    {
+      "name": "Binary Volume Calculation",
+      "status": "PASS",
+      "message": "Using real database values",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.389Z"
+    },
+    {
+      "name": "Earnings Breakdown",
+      "status": "PASS",
+      "message": "All earnings fields present",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.389Z"
+    },
+    {
+      "name": "Table: users",
+      "status": "PASS",
+      "message": "Table exists",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.403Z"
+    },
+    {
+      "name": "Table: packages",
+      "status": "PASS",
+      "message": "Table exists",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.404Z"
+    },
+    {
+      "name": "Table: user_packages",
+      "status": "PASS",
+      "message": "Table exists",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.404Z"
+    },
+    {
+      "name": "Table: commissions",
+      "status": "PASS",
+      "message": "Table exists",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.404Z"
+    },
+    {
+      "name": "Table: mlm_transactions",
+      "status": "PASS",
+      "message": "Table exists",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.404Z"
+    },
+    {
+      "name": "Table: ranks",
+      "status": "PASS",
+      "message": "Table exists",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.404Z"
+    },
+    {
+      "name": "Earnings Columns",
+      "status": "PASS",
+      "message": "All earnings columns added to users table",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.409Z"
+    },
+    {
+      "name": "User Data",
+      "status": "PASS",
+      "message": "2 users in database",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.416Z"
+    },
+    {
+      "name": "Package Data",
+      "status": "PASS",
+      "message": "3 packages configured",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.416Z"
+    },
+    {
+      "name": "Package: Starter Package",
+      "status": "PASS",
+      "message": "ROI: 5.00%, Duration: 40 days",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.420Z"
+    },
+    {
+      "name": "Package: Professional Package",
+      "status": "PASS",
+      "message": "ROI: 5.00%, Duration: 40 days",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.420Z"
+    },
+    {
+      "name": "Package: VIP Package",
+      "status": "PASS",
+      "message": "ROI: 5.00%, Duration: 40 days",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.420Z"
+    },
+    {
+      "name": "Rank System",
+      "status": "PASS",
+      "message": "10 ranks configured",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.422Z"
+    },
+    {
+      "name": "Orphaned User Packages",
+      "status": "PASS",
+      "message": "No orphaned records found",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.424Z"
+    },
+    {
+      "name": "Invalid Sponsor Relationships",
+      "status": "PASS",
+      "message": "All sponsor IDs valid",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.425Z"
+    },
+    {
+      "name": "Negative Balances",
+      "status": "PASS",
+      "message": "No negative balances found",
+      "data": null,
+      "timestamp": "2025-11-05T05:26:02.426Z"
+    }
+  ]
+}

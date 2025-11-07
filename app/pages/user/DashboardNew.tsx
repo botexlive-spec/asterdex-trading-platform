@@ -4,7 +4,8 @@ import { format } from 'date-fns';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import toast, { Toaster } from 'react-hot-toast';
 import { Button, Card, Badge, StatCard } from '../../components/ui/DesignSystem';
-import { getUserDashboard, getTeamStats } from '../../services/mlm.service';
+import { getUserDashboard } from '../../services/mlm.service';
+import { getTeamMembers } from '../../services/team.service';
 import { useAuth } from '../../context/AuthContext';
 
 // Skeleton loader component
@@ -143,15 +144,15 @@ export const DashboardNew: React.FC = () => {
 
       try {
         setLoading(true);
-        console.log('📊 DashboardNew - Auth Context User:', user.id, user.email);
-        console.log('📊 DashboardNew - Loading dashboard data for user:', user.id);
-        console.log('🔧 FAKE DATA FIX ACTIVE - Will replace all demo data with real API data');
-        const [dashboardData, teamStats] = await Promise.all([
-          getUserDashboard(user.id),  // ← FIX: Pass user.id explicitly
-          getTeamStats(user.id)  // ← FIX: Pass user.id explicitly like Team page does
+        console.log('📊 [Dashboard] Auth Context User:', user.id, user.email);
+        console.log('📊 [Dashboard] Loading dashboard data for user:', user.id);
+        console.log('🔧 [Dashboard] Using unified MySQL team.service for team stats');
+        const [dashboardData, teamData] = await Promise.all([
+          getUserDashboard(user.id),  // User data from Supabase (wallet, earnings, etc.)
+          getTeamMembers()  // ✅ Team data from MySQL API (JWT-based)
         ]);
-        console.log('📊 DashboardNew - Received data for user:', dashboardData.user.id, dashboardData.user.email);
-        console.log('📊 DashboardNew - Team stats:', teamStats.totalTeamSize, 'members,', teamStats.directCount, 'direct');
+        console.log('📊 [Dashboard] Received data for user:', dashboardData.user.id, dashboardData.user.email);
+        console.log('📊 [Dashboard] Team stats:', teamData.summary.total_team, 'members,', teamData.summary.direct_members, 'direct');
         console.log('📊 DashboardNew - Earnings:', {
           today: dashboardData.statistics.today_earnings,
           week: dashboardData.statistics.week_earnings,
@@ -185,8 +186,8 @@ export const DashboardNew: React.FC = () => {
           totalEarningsWeek: dashboardData.statistics.week_earnings || 0,
           totalEarningsMonth: dashboardData.statistics.month_earnings || 0,
           teamSize: {
-            directs: teamStats.directCount || 0,
-            total: teamStats.totalTeamSize || 0
+            directs: teamData.summary.direct_members || 0,  // ✅ From MySQL
+            total: teamData.summary.total_team || 0  // ✅ From MySQL
           },
           binaryVolume: {
             left: dashboardData.statistics.left_volume || 0,

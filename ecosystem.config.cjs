@@ -1,70 +1,42 @@
 /**
- * PM2 Ecosystem Configuration
- *
- * This file configures PM2 to run the daily ROI distribution script
- * on a schedule (cron job).
- *
- * Usage:
- *   pm2 start ecosystem.config.cjs
- *   pm2 save
- *   pm2 startup
- *
- * To stop:
- *   pm2 stop roi-distribution
- *   pm2 delete roi-distribution
+ * PM2 Ecosystem Configuration for Finaster
+ * Auto-start both frontend and backend servers
  */
 
 module.exports = {
   apps: [
     {
-      name: 'roi-distribution',
-      script: './scripts/distribute-daily-roi.js',
-
-      // Run as a cron job (daily at 2:00 AM)
-      cron_restart: '0 2 * * *',
-
-      // Don't run on startup, only on cron schedule
-      autorestart: false,
-
-      // Watch for file changes (useful during development)
-      watch: false,
-
-      // Maximum memory allowed (restart if exceeded)
-      max_memory_restart: '200M',
-
-      // Environment variables
+      name: 'finaster-backend',
+      script: 'pnpm',
+      args: 'run dev:server',
+      cwd: 'C:\\Projects\\asterdex-8621-main',
       env: {
-        NODE_ENV: 'production',
-        TZ: 'UTC'  // Use UTC timezone for consistency
+        NODE_ENV: 'development',
+        API_PORT: 3001,
       },
-
-      // Logging configuration
-      error_file: './logs/roi-distribution-error.log',
-      out_file: './logs/roi-distribution-out.log',
-      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-      merge_logs: true,
-
-      // Process management
       instances: 1,
-      exec_mode: 'fork',
-
-      // Auto-restart settings
+      autorestart: true,
+      max_restarts: 10,
       min_uptime: '10s',
-      max_restarts: 3,
-
-      // Kill timeout
-      kill_timeout: 5000,
-
-      // Wait time before restart
-      restart_delay: 4000,
-
-      // Script information
-      args: '',
-      node_args: '',
-
-      // Interpreter
-      interpreter: 'node',
-      interpreter_args: ''
-    }
-  ]
+      error_file: 'logs/backend-error.log',
+      out_file: 'logs/backend-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+    },
+    {
+      name: 'finaster-frontend',
+      script: 'pnpm',
+      args: 'run dev',
+      cwd: 'C:\\Projects\\asterdex-8621-main',
+      env: {
+        NODE_ENV: 'development',
+      },
+      instances: 1,
+      autorestart: true,
+      max_restarts: 10,
+      min_uptime: '10s',
+      error_file: 'logs/frontend-error.log',
+      out_file: 'logs/frontend-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+    },
+  ],
 };

@@ -3,7 +3,6 @@
  * Manage emails, SMS, announcements, news, and push notifications
  */
 
-import { supabase } from './supabase.client';
 import { requireAdmin } from '../middleware/admin.middleware';
 
 // ============================================

@@ -3,7 +3,6 @@
  * Handles all support ticket and live chat operations
  */
 
-import { supabase } from './supabase.client';
 import { requireAdmin } from '../middleware/admin.middleware';
 
 // Types

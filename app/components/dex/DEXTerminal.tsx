@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { supabase } from '../../services/supabase.client';
+
 
 interface DEXTerminalProps {
   symbol?: string;
@@ -70,7 +70,7 @@ export const DEXTerminal: React.FC<DEXTerminalProps> = ({
    */
   const handleTradeExecuted = async (trade: any) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // MySQL backend handles auth
       if (!user) return;
 
       // Record trade in database
@@ -123,7 +123,7 @@ export const DEXTerminal: React.FC<DEXTerminalProps> = ({
    */
   const handleOrderPlaced = async (order: any) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // MySQL backend handles auth
       if (!user) return;
 
       // Create notification for pending order
@@ -157,7 +157,7 @@ export const DEXTerminal: React.FC<DEXTerminalProps> = ({
    */
   const handleBalanceUpdated = async (balance: any) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // MySQL backend handles auth
       if (!user) return;
 
       // Optionally sync DEX balance with wallet balance

@@ -3,7 +3,6 @@
  * Handles KYC verification and management for admin panel
  */
 
-import { supabase } from './supabase.client';
 import { requireAdmin } from '../middleware/admin.middleware';
 
 export interface KYCSubmissionAdmin {

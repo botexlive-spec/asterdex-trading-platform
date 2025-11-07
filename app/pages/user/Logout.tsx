@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../services/supabase.client';
+
 
 export const Logout: React.FC = () => {
   const navigate = useNavigate();
@@ -8,7 +8,7 @@ export const Logout: React.FC = () => {
   useEffect(() => {
     const performLogout = async () => {
       try {
-        await supabase.auth.signOut();
+        
         // Clear any local storage
         localStorage.clear();
         sessionStorage.clear();

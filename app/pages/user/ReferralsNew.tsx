@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { QRCodeSVG } from 'qrcode.react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
-import { getReferrals } from '../../services/mlm.service';
+import { getDirectReferrals } from '../../services/team.service';
 
 const ReferralsNew: React.FC = () => {
   const { user } = useAuth();
@@ -21,11 +21,11 @@ const ReferralsNew: React.FC = () => {
   useEffect(() => {
     const fetchReferrals = async () => {
       if (!user?.id) {
-        console.log('⚠️ No user ID available');
+        console.log('⚠️ [Referrals] No user ID available');
         return;
       }
 
-      console.log('👥 Fetching referrals for user:', user.email);
+      console.log('👥 [Referrals] Fetching direct referrals for user:', user.email);
       setLoading(true);
       setError(null);
 
@@ -35,27 +35,32 @@ const ReferralsNew: React.FC = () => {
           setTimeout(() => reject(new Error('Request timed out after 10 seconds')), 10000)
         );
 
+        // Get direct referrals from MySQL API (JWT-based)
         const refs = await Promise.race([
-          getReferrals(user.id),
+          getDirectReferrals(),
           timeoutPromise
         ]) as any[];
+
+        console.log('📊 [Referrals] Received:', refs.length, 'direct referrals');
+
         // Transform data to match existing interface
         const transformedRefs = refs.map((ref: any) => ({
           id: ref.id,
-          name: ref.refereeName,
-          email: ref.refereeEmail,
-          joinDate: ref.joinDate,
-          status: ref.isActive ? 'active' : 'inactive',
-          investment: ref.totalInvestment,
-          earnings: ref.commissionEarned,
+          name: ref.full_name || 'Unknown User',
+          email: ref.email || '',
+          joinDate: ref.created_at || new Date().toISOString(),
+          status: ref.is_active ? 'active' : 'inactive',
+          investment: parseFloat(ref.total_investment) || 0,
+          earnings: parseFloat(ref.commission_earnings) || 0,
           level: 1, // Direct referrals are level 1
         }));
+
         setReferrals(transformedRefs);
-        console.log('✅ Referrals loaded:', transformedRefs.length);
+        console.log('✅ [Referrals] Referrals loaded:', transformedRefs.length);
       } catch (err: any) {
         const errorMessage = err.message || 'Failed to load referrals';
         setError(errorMessage);
-        console.error('❌ Error fetching referrals:', errorMessage);
+        console.error('❌ [Referrals] Error fetching referrals:', errorMessage);
         toast.error(errorMessage);
         setReferrals([]);
       } finally {

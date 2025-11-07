@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../services/supabase.client';
+
 import toast from 'react-hot-toast';
 
 export const Referrals: React.FC = () => {
@@ -25,7 +25,7 @@ export const Referrals: React.FC = () => {
       setLoading(true);
 
       // Get current user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      ;
       if (authError) throw authError;
       if (!user) throw new Error('User not authenticated');
 

@@ -3,7 +3,6 @@
  * Manages binary tree operations, placements, and settings
  */
 
-import { supabase } from './supabase.client';
 import { requireAdmin } from '../middleware/admin.middleware';
 
 export interface BinaryNode {

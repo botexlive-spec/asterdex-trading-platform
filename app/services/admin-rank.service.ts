@@ -3,7 +3,6 @@
  * Manages rank reward configurations and distributions
  */
 
-import { supabase } from './supabase.client';
 import { requireAdmin } from '../middleware/admin.middleware';
 
 export interface RankReward {

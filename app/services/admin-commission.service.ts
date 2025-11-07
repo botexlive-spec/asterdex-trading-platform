@@ -3,7 +3,6 @@
  * Manages commission configurations, processing, and adjustments
  */
 
-import { supabase } from './supabase.client';
 import { requireAdmin } from '../middleware/admin.middleware';
 
 export interface LevelCommissionConfig {

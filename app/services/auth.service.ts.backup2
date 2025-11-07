@@ -15,10 +15,25 @@ import {
 } from '../types/auth.types';
 
 /**
- * Sign up a new user
+ * Sign up a new user with complete MLM onboarding
  */
 export const signUp = async (data: RegisterData): Promise<AuthResponse> => {
   try {
+    // Import MLM service dynamically to avoid circular dependency
+    const { completeMlmOnboarding, validateReferralCode } = await import('./mlm.service');
+
+    // Validate referral code if provided
+    let sponsorId: string | undefined;
+    if (data.referral_code) {
+      const validation = await validateReferralCode(data.referral_code);
+      if (validation.valid && validation.userId) {
+        sponsorId = validation.userId;
+      } else {
+        throw new Error('Invalid referral code');
+      }
+    }
+
+    // Create auth user
     const { data: authData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
@@ -27,20 +42,44 @@ export const signUp = async (data: RegisterData): Promise<AuthResponse> => {
           full_name: data.full_name,
           wallet_address: data.wallet_address,
         },
+        emailRedirectTo: `${window.location.origin}/verify-email`,
       },
     });
 
     if (error) throw error;
     if (!authData.user) throw new Error('User creation failed');
 
-    // Fetch the full user profile from our custom users table
+    const userId = authData.user.id;
+
+    // Wait for database trigger to create user profile
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Complete MLM onboarding (referral code, binary tree, wallet init)
+    await completeMlmOnboarding(userId, sponsorId);
+
+    // Fetch the complete user profile
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('*')
-      .eq('id', authData.user.id)
-      .single();
+      .eq('id', userId)
+      .maybeSingle();
 
-    if (userError) throw userError;
+    // If user profile doesn't exist yet, return minimal user object
+    if (userError || !userData) {
+      console.warn('User profile not yet created in users table:', userError?.message);
+
+      return {
+        user: {
+          id: userId,
+          email: authData.user.email || data.email,
+          full_name: data.full_name,
+          created_at: authData.user.created_at || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as User,
+        token: authData.session?.access_token || '',
+        refreshToken: authData.session?.refresh_token,
+      };
+    }
 
     return {
       user: userData as User,

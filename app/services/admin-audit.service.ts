@@ -3,7 +3,6 @@
  * Manages audit logs for admin actions, user actions, and system events
  */
 
-import { supabase } from './supabase.client';
 import { requireAdmin } from '../middleware/admin.middleware';
 
 export interface AdminLog {

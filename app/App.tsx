@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Outlet } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import OrderlyProvider from "@/components/orderlyProvider";
@@ -23,7 +24,16 @@ export default function App() {
       <ImpersonationBanner />
       <OrderlyProvider>
         <div className="pb-0 md:pb-0">
-          <Outlet />
+          <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-gray-400">Loading...</p>
+              </div>
+            </div>
+          }>
+            <Outlet />
+          </Suspense>
         </div>
         <MobileBottomNav />
       </OrderlyProvider>

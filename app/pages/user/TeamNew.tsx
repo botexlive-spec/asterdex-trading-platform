@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, Button, Badge } from '../../components/ui/DesignSystem';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
-import { getTeamMembers } from '../../services/mlm.service';
+import { getTeamMembers } from '../../services/team.service';
 import { ResponsiveTable } from '../../components/ResponsiveTable';
 
 // Mock data for team members
@@ -155,12 +155,15 @@ const TeamNew: React.FC = () => {
         return;
       }
 
-      console.log('👤 Current user:', user.email, 'ID:', user.id);
+      console.log('👤 [My Team] Current user:', user.email, 'ID:', user.id);
       setLoading(true);
       try {
-        // Call the service to get team members
-        const members = await getTeamMembers(user.id);
-        console.log('📊 Team members received:', members?.length || 0, 'members');
+        // Call the MySQL API to get team members (JWT-based authentication)
+        const teamData = await getTeamMembers();
+        const members = teamData.members || [];
+
+        console.log('📊 [My Team] Team members received:', members.length, 'members');
+        console.log('📊 [My Team] Summary:', teamData.summary);
 
         // Map API data to component format (API returns full_name, component expects name)
         // Create user ID to index mapping first
@@ -169,7 +172,7 @@ const TeamNew: React.FC = () => {
           idToIndex.set(member.id, index + 1);
         });
 
-        const mappedMembers = (members || []).map((member: any, index: number) => {
+        const mappedMembers = members.map((member: any, index: number) => {
           // Find parent index based on sponsor_id
           let parentId = null;
           if (member.sponsor_id && member.sponsor_id !== user?.id) {
@@ -184,9 +187,9 @@ const TeamNew: React.FC = () => {
             joinDate: member.created_at || new Date().toISOString(),
             status: member.is_active ? 'active' : 'inactive',
             totalInvestment: parseFloat(member.total_investment) || 0,
-            teamSize: member.teamSize || member.team_count || 0,
+            teamSize: member.team_count || 0,
             volume: (parseFloat(member.left_volume) || 0) + (parseFloat(member.right_volume) || 0),
-            directReferrals: member.directReferrals || member.direct_count || 0,
+            directReferrals: 0, // Will be calculated from the data
             leftLeg: parseFloat(member.left_volume) || 0,
             rightLeg: parseFloat(member.right_volume) || 0,
             parentId: parentId,
@@ -196,11 +199,11 @@ const TeamNew: React.FC = () => {
 
         setTeamMembers(mappedMembers);
 
-        if (!members || members.length === 0) {
-          console.log('ℹ️ No team members found for user');
+        if (members.length === 0) {
+          console.log('ℹ️ [My Team] No team members found for user');
         }
       } catch (error: any) {
-        console.error('❌ Error fetching team members:', error);
+        console.error('❌ [My Team] Error fetching team members:', error);
         toast.error(error.message || 'Failed to load team members');
         setTeamMembers([]);
       } finally {

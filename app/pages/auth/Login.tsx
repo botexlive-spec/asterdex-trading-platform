@@ -5,11 +5,14 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { signIn } from '../../services/auth.service';
 import { validateEmail, validateRequired } from '../../utils/validation';
+import { UserRole } from '../../types/auth.types';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
+  const { checkAuth } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -54,17 +57,27 @@ export const Login: React.FC = () => {
         password: formData.password,
       });
 
-      // Store auth token
+      // Store auth token and user data
       if (rememberMe) {
         localStorage.setItem('auth_token', response.token);
-        localStorage.setItem('user_role', response.user.role);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        localStorage.setItem('refreshToken', response.refreshToken || response.token);
       } else {
         sessionStorage.setItem('auth_token', response.token);
-        sessionStorage.setItem('user_role', response.user.role);
+        sessionStorage.setItem('user', JSON.stringify(response.user));
+        sessionStorage.setItem('refreshToken', response.refreshToken || response.token);
       }
 
-      // Redirect to dashboard (will show different content based on role)
-      navigate('/dashboard');
+      // Update AuthContext state immediately
+      checkAuth();
+
+      // Redirect based on user role
+      const userRole = response.user.role;
+      if (userRole === UserRole.ADMIN || userRole === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       console.error('Login error:', err);
 
@@ -225,7 +238,7 @@ export const Login: React.FC = () => {
             <div className="quick-buttons">
               <button
                 type="button"
-                onClick={() => handleQuickLogin('admin@asterdex.com', 'admin123')}
+                onClick={() => handleQuickLogin('admin@finaster.com', 'admin123')}
                 className="btn-quick admin"
                 disabled={loading}
               >
@@ -233,7 +246,7 @@ export const Login: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => handleQuickLogin('user@asterdex.com', 'user123')}
+                onClick={() => handleQuickLogin('user@finaster.com', 'user123')}
                 className="btn-quick user"
                 disabled={loading}
               >
@@ -283,12 +296,12 @@ export const Login: React.FC = () => {
             <h4>🔑 Test Credentials</h4>
             <div className="credential-box">
               <p><strong>Admin:</strong></p>
-              <p>Email: admin@asterdex.com</p>
+              <p>Email: admin@finaster.com</p>
               <p>Password: admin123</p>
             </div>
             <div className="credential-box">
               <p><strong>User:</strong></p>
-              <p>Email: user@asterdex.com</p>
+              <p>Email: user@finaster.com</p>
               <p>Password: user123</p>
             </div>
           </div>

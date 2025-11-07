@@ -372,6 +372,23 @@ const RanksNew: React.FC = () => {
     'Exclusive Events': ['❌', '❌', '❌', '❌', '✅', '✅', '✅', '✅', '✅', '✅']
   };
 
+  // Show loading state if data not loaded
+  if (loading || !currentRank) {
+    return (
+      <>
+        <Helmet>
+          <title>Ranks - Asterdex</title>
+        </Helmet>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading ranks...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <Helmet>
@@ -383,7 +400,7 @@ const RanksNew: React.FC = () => {
         <div
           className="relative rounded-2xl overflow-hidden shadow-2xl"
           style={{
-            background: `linear-gradient(135deg, ${currentRank.gradientFrom}, ${currentRank.gradientTo})`
+            background: `linear-gradient(135deg, ${currentRank?.gradientFrom || '#10b981'}, ${currentRank?.gradientTo || '#059669'})`
           }}
         >
           <div className="absolute inset-0 opacity-10">
@@ -398,11 +415,11 @@ const RanksNew: React.FC = () => {
               {/* Rank Icon/Badge */}
               <div className="relative">
                 <div className="w-32 h-32 md:w-40 md:h-40 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-4 border-white/40 shadow-xl">
-                  <span className="text-7xl md:text-8xl">{currentRank.icon}</span>
+                  <span className="text-7xl md:text-8xl">{currentRank?.icon || '🌱'}</span>
                 </div>
                 <div className="absolute -bottom-2 -right-2 bg-white rounded-full px-4 py-2 shadow-lg">
-                  <span className="text-sm font-bold" style={{ color: currentRank.color }}>
-                    Rank {currentRank.id}
+                  <span className="text-sm font-bold" style={{ color: currentRank?.color || '#10b981' }}>
+                    Rank {currentRank?.id || 1}
                   </span>
                 </div>
               </div>
@@ -410,7 +427,7 @@ const RanksNew: React.FC = () => {
               {/* Rank Details */}
               <div className="flex-1 text-center md:text-left">
                 <div className="text-white/80 text-sm font-medium mb-2">CURRENT RANK</div>
-                <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">{currentRank.name}</h1>
+                <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">{currentRank?.name || 'Loading...'}</h1>
                 <div className="text-white/90 text-lg mb-4">
                   Achieved on {new Date('2024-10-10').toLocaleDateString('en-US', {
                     month: 'long',
@@ -423,7 +440,7 @@ const RanksNew: React.FC = () => {
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
                   <div className="text-white/80 text-sm font-medium mb-2">BENEFITS UNLOCKED</div>
                   <div className="flex flex-wrap gap-2">
-                    {currentRank.benefits.map((benefit, index) => (
+                    {(currentRank?.benefits || []).map((benefit, index) => (
                       <span
                         key={index}
                         className="bg-white/20 backdrop-blur-sm text-white text-xs px-3 py-1 rounded-full border border-white/30"
@@ -884,11 +901,11 @@ const RanksNew: React.FC = () => {
                       <td
                         key={rank.id}
                         className={`py-3 px-3 text-center ${
-                          rank.id === currentRank.id ? 'bg-cyan-900/20' : ''
+                          rank.id === currentRank?.id ? 'bg-cyan-900/20' : ''
                         }`}
                       >
                         <span className={`${
-                          rank.id === currentRank.id ? 'text-cyan-400 font-bold' : 'text-gray-300'
+                          rank.id === currentRank?.id ? 'text-cyan-400 font-bold' : 'text-gray-300'
                         }`}>
                           {benefitsMatrix[category][rank.id - 1]}
                         </span>
@@ -901,7 +918,7 @@ const RanksNew: React.FC = () => {
           </div>
 
           <div className="mt-4 text-center text-gray-400 text-xs">
-            Your current rank ({currentRank.name}) is highlighted in cyan
+            Your current rank ({currentRank?.name || 'Loading...'}) is highlighted in cyan
           </div>
         </Card>
 

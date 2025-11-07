@@ -1,10 +1,9 @@
 /**
  * Admin User Service
  * Handles admin-specific user management operations
- * Updated with better error handling for missing tables
+ * Uses Express MySQL backend API
  */
 
-import { supabase } from './supabase.client';
 import { requireAdmin } from '../middleware/admin.middleware';
 
 export interface UserDetailedInfo {
@@ -88,730 +87,375 @@ export interface AdminActionRequest {
 }
 
 /**
- * Get detailed user information for admin panel
+ * Get API base URL
+ */
+const getApiUrl = (): string => {
+  return import.meta.env.VITE_API_URL || 'http://localhost:3001';
+};
+
+/**
+ * Get authentication token from storage
+ */
+const getAuthToken = (): string | null => {
+  return localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+};
+
+/**
+ * Make authenticated API request
+ */
+const apiRequest = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
+  const token = getAuthToken();
+
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+
+  const url = `${getApiUrl()}${endpoint}`;
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `API request failed: ${response.status}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Get all users with optional filtering and pagination
+ */
+export const getAllUsers = async (
+  filters: any = {},
+  page: number = 1,
+  limit: number = 50
+): Promise<{ users: UserDetailedInfo[]; total: number; page: number; totalPages: number }> => {
+  try {
+    await requireAdmin();
+
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      ...filters,
+    });
+
+    const data = await apiRequest<any>(`/api/admin/users?${params}`);
+
+    return {
+      users: (data.users || []).map((user: any) => ({
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name || user.email,
+        wallet_balance: parseFloat(user.wallet_balance) || 0,
+        total_investment: parseFloat(user.total_investment) || 0,
+        total_earnings: parseFloat(user.total_earnings) || 0,
+        referral_code: user.referral_code || '',
+        referred_by: user.sponsor_id,
+        rank: user.current_rank || 'starter',
+        kyc_status: user.kyc_status || 'not_submitted',
+        is_active: Boolean(user.is_active),
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+        total_referrals: 0, // TODO: Calculate from team
+        active_packages: 0, // TODO: Calculate from packages
+        pending_withdrawals: 0, // TODO: Calculate from withdrawals
+      })),
+      total: data.pagination?.total || 0,
+      page: data.pagination?.page || page,
+      totalPages: data.pagination?.totalPages || 1,
+    };
+  } catch (error: any) {
+    console.error('Error getting all users:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get detailed user information
  */
 export const getUserDetailedInfo = async (userId: string): Promise<UserDetailedInfo | null> => {
   try {
-        // Verify admin access
     await requireAdmin();
 
-// Get user basic info
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    const data = await apiRequest<any>(`/api/admin/users/${userId}`);
 
-    if (userError) {
-      console.error('Error fetching user basic info:', userError);
-      console.error('User ID:', userId);
-      console.error('Error details:', JSON.stringify(userError));
-      return null; // Return null instead of throwing
-    }
-    if (!user) {
-      console.warn('User not found:', userId);
+    if (!data || !data.user) {
       return null;
     }
 
-    // Get total referrals count (gracefully handle errors)
-    let referralCount = 0;
-    try {
-      const { count } = await supabase
-        .from('users')
-        .select('id', { count: 'exact', head: true })
-        .eq('referred_by', userId);
-      referralCount = count || 0;
-    } catch (error) {
-      console.warn('Failed to get referral count:', error);
-    }
-
-    // Get active packages count (gracefully handle errors)
-    let activePackages = 0;
-    try {
-      const { count } = await supabase
-        .from('user_packages')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('status', 'active');
-      activePackages = count || 0;
-    } catch (error) {
-      console.warn('Failed to get active packages count:', error);
-    }
-
-    // Get pending withdrawals count (gracefully handle errors)
-    let pendingWithdrawals = 0;
-    try {
-      const { count } = await supabase
-        .from('withdrawal_requests')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('status', 'pending');
-      pendingWithdrawals = count || 0;
-    } catch (error) {
-      console.warn('Failed to get pending withdrawals count:', error);
-    }
-
+    const user = data.user;
     return {
-      ...user,
-      total_referrals: referralCount,
-      active_packages: activePackages,
-      pending_withdrawals: pendingWithdrawals,
+      id: user.id,
+      email: user.email,
+      full_name: user.full_name || user.email,
+      wallet_balance: parseFloat(user.wallet_balance) || 0,
+      total_investment: parseFloat(user.total_investment) || 0,
+      total_earnings: parseFloat(user.total_earnings) || 0,
+      referral_code: user.referral_code || '',
+      referred_by: user.sponsor_id,
+      rank: user.current_rank || 'starter',
+      kyc_status: user.kyc_status || 'not_submitted',
+      is_active: Boolean(user.is_active),
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+      total_referrals: 0,
+      active_packages: 0,
+      pending_withdrawals: 0,
     };
   } catch (error: any) {
     console.error('Error getting user detailed info:', error);
-    throw new Error(error.message || 'Failed to get user information');
+    return null;
   }
 };
 
 /**
- * Get user's packages for admin view
+ * Get user's packages
  */
 export const getUserPackages = async (userId: string): Promise<UserPackageInfo[]> => {
   try {
-        // Verify admin access
     await requireAdmin();
 
-const { data, error } = await supabase
-      .from('user_packages')
-      .select(`
-        *,
-        package:packages (
-          name
-        )
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.warn('Error getting user packages:', error);
-      return []; // Return empty array instead of throwing
-    }
-
-    return (data || []).map((item: any) => ({
-      id: item.id,
-      package_id: item.package_id,
-      package_name: item.package?.name || 'Unknown Package',
-      amount_invested: item.amount_invested,
-      start_date: item.start_date,
-      end_date: item.end_date,
-      daily_return: item.daily_return,
-      total_return: item.total_return,
-      claimed_return: item.claimed_return,
-      status: item.status,
-      created_at: item.created_at,
-    }));
+    // TODO: Create backend endpoint for user packages
+    // For now, return empty array
+    return [];
   } catch (error: any) {
     console.error('Error getting user packages:', error);
-    return []; // Return empty array instead of throwing
+    return [];
   }
 };
 
 /**
- * Get user's transaction history for admin view
+ * Get user's transaction history
  */
-export const getUserTransactions = async (
-  userId: string,
-  limit: number = 50
-): Promise<UserTransaction[]> => {
+export const getUserTransactions = async (userId: string, limit: number = 50): Promise<UserTransaction[]> => {
   try {
-        // Verify admin access
     await requireAdmin();
 
-const { data, error } = await supabase
-      .from('mlm_transactions')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    const data = await apiRequest<any>(`/api/admin/transactions?user_id=${userId}&limit=${limit}`);
 
-    if (error) {
-      console.warn('Error getting user transactions:', error);
-      return []; // Return empty array instead of throwing
-    }
-
-    return data || [];
+    return (data.transactions || []).map((txn: any) => ({
+      id: txn.id,
+      transaction_type: txn.transaction_type,
+      amount: parseFloat(txn.amount),
+      status: txn.status,
+      metadata: {
+        description: txn.description,
+      },
+      created_at: txn.created_at,
+    }));
   } catch (error: any) {
     console.error('Error getting user transactions:', error);
-    return []; // Return empty array instead of throwing
+    return [];
   }
 };
 
 /**
- * Get user's team members (direct referrals)
+ * Get user's team members
  */
 export const getUserTeam = async (userId: string): Promise<TeamMember[]> => {
   try {
-    // Verify admin access
     await requireAdmin();
 
-    console.log('🔍 Fetching team members for user:', userId);
-
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, full_name, email, current_rank, total_investment, wallet_balance, created_at, is_active')
-      .eq('sponsor_id', userId)  // Changed from 'referred_by' to 'sponsor_id'
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.warn('❌ Error getting user team:', error);
-      return []; // Return empty array instead of throwing
-    }
-
-    console.log(`✅ Found ${data?.length || 0} team members`);
-
-    return (data || []).map(member => ({
-      ...member,
-      rank: member.current_rank || 'starter', // Map current_rank to rank
-    }));
+    // TODO: Create backend endpoint for user team
+    // For now, return empty array
+    return [];
   } catch (error: any) {
     console.error('Error getting user team:', error);
-    return []; // Return empty array instead of throwing
+    return [];
   }
 };
 
 /**
  * Get user's earnings breakdown
  */
-export const getUserEarnings = async (userId: string): Promise<UserEarnings> => {
-  const defaultEarnings: UserEarnings = {
-    roi_earnings: 0,
-    referral_earnings: 0,
-    binary_earnings: 0,
-    rank_bonus: 0,
-    total_earnings: 0,
-  };
-
+export const getUserEarnings = async (userId: string): Promise<UserEarnings | null> => {
   try {
-    // Get all earnings transactions
-    const { data: transactions, error } = await supabase
-      .from('mlm_transactions')
-      .select('transaction_type, amount')
-      .eq('user_id', userId)
-      .in('transaction_type', [
-        'package_return',
-        'referral_commission',
-        'binary_commission',
-        'rank_bonus',
-      ]);
+    await requireAdmin();
 
-    if (error) {
-      console.warn('Error getting user earnings:', error);
-      return defaultEarnings; // Return default instead of throwing
+    const userInfo = await getUserDetailedInfo(userId);
+
+    if (!userInfo) {
+      return null;
     }
 
-    const earnings: UserEarnings = { ...defaultEarnings };
-
-    transactions?.forEach((tx: any) => {
-      const amount = Math.abs(tx.amount);
-      switch (tx.transaction_type) {
-        case 'package_return':
-          earnings.roi_earnings += amount;
-          break;
-        case 'referral_commission':
-          earnings.referral_earnings += amount;
-          break;
-        case 'binary_commission':
-          earnings.binary_earnings += amount;
-          break;
-        case 'rank_bonus':
-          earnings.rank_bonus += amount;
-          break;
-      }
-      earnings.total_earnings += amount;
-    });
-
-    return earnings;
+    // TODO: Get actual breakdown from backend
+    return {
+      roi_earnings: 0,
+      referral_earnings: 0,
+      binary_earnings: 0,
+      rank_bonus: 0,
+      total_earnings: userInfo.total_earnings,
+    };
   } catch (error: any) {
     console.error('Error getting user earnings:', error);
-    return defaultEarnings; // Return default instead of throwing
+    return null;
   }
 };
 
 /**
  * Get user's activity log
  */
-export const getUserActivityLog = async (
-  userId: string,
-  limit: number = 50
-): Promise<ActivityLog[]> => {
+export const getUserActivityLog = async (userId: string, limit: number = 50): Promise<ActivityLog[]> => {
   try {
-        // Verify admin access
     await requireAdmin();
 
-const { data, error } = await supabase
-      .from('activity_logs')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    if (error) {
-      // If activity_logs table doesn't exist, return empty array
-      console.warn('Activity logs table not found, returning empty array');
-      return [];
-    }
-
-    return data || [];
+    // TODO: Create backend endpoint for activity log
+    // For now, return empty array
+    return [];
   } catch (error: any) {
     console.error('Error getting user activity log:', error);
-    // Return empty array instead of throwing error if table doesn't exist
     return [];
   }
 };
 
 /**
- * Adjust user wallet balance (admin action)
+ * Assign package to user
  */
-export const adjustWalletBalance = async (
+export const assignPackageToUser = async (
   userId: string,
-  amount: number,
-  reason: string,
-  adminNotes?: string
-): Promise<void> => {
+  packageId: string,
+  amount: number
+): Promise<boolean> => {
   try {
-        // Verify admin access
     await requireAdmin();
 
-const { data: { user: admin }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!admin) throw new Error('Admin not authenticated');
-
-    // Get current balance
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('wallet_balance')
-      .eq('id', userId)
-      .single();
-
-    if (userError) throw userError;
-
-    // Update wallet balance
-    const newBalance = userData.wallet_balance + amount;
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
-        wallet_balance: newBalance,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', userId);
-
-    if (updateError) throw updateError;
-
-    // Create transaction record
-    await supabase.from('mlm_transactions').insert({
-      user_id: userId,
-      transaction_type: amount > 0 ? 'admin_credit' : 'admin_debit',
-      amount: amount,
-      status: 'completed',
-      metadata: {
-        admin_id: admin.id,
-        reason: reason,
-        notes: adminNotes,
-        previous_balance: userData.wallet_balance,
-        new_balance: newBalance,
-      },
-    });
-
-    // Log admin action
-    await logAdminAction(userId, admin.id, 'wallet_adjustment', {
-      amount,
-      reason,
-      notes: adminNotes,
-    });
+    // TODO: Create backend endpoint for package assignment
+    // For now, return false
+    console.warn('assignPackageToUser not implemented yet');
+    return false;
   } catch (error: any) {
-    console.error('Error adjusting wallet balance:', error);
-    throw new Error(error.message || 'Failed to adjust wallet balance');
+    console.error('Error assigning package to user:', error);
+    throw error;
   }
 };
 
 /**
- * Change user rank (admin action)
+ * Cancel user package
+ */
+export const cancelUserPackage = async (packageId: string, reason: string): Promise<boolean> => {
+  try {
+    await requireAdmin();
+
+    // TODO: Create backend endpoint for package cancellation
+    // For now, return false
+    console.warn('cancelUserPackage not implemented yet');
+    return false;
+  } catch (error: any) {
+    console.error('Error cancelling user package:', error);
+    throw error;
+  }
+};
+
+/**
+ * Create manual transaction
+ */
+export const createManualTransaction = async (
+  userId: string,
+  type: string,
+  amount: number,
+  description: string
+): Promise<boolean> => {
+  try {
+    await requireAdmin();
+
+    // TODO: Create backend endpoint for manual transactions
+    // For now, return false
+    console.warn('createManualTransaction not implemented yet');
+    return false;
+  } catch (error: any) {
+    console.error('Error creating manual transaction:', error);
+    throw error;
+  }
+};
+
+/**
+ * Adjust wallet balance
+ */
+export const adjustWalletBalance = async (
+  userId: string,
+  amount: number,
+  reason: string
+): Promise<boolean> => {
+  try {
+    await requireAdmin();
+
+    // TODO: Create backend endpoint for wallet adjustment
+    // For now, return false
+    console.warn('adjustWalletBalance not implemented yet');
+    return false;
+  } catch (error: any) {
+    console.error('Error adjusting wallet balance:', error);
+    throw error;
+  }
+};
+
+/**
+ * Change user rank
  */
 export const changeUserRank = async (
   userId: string,
   newRank: string,
   reason: string
-): Promise<void> => {
+): Promise<boolean> => {
   try {
-        // Verify admin access
     await requireAdmin();
 
-const { data: { user: admin }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!admin) throw new Error('Admin not authenticated');
-
-    // Get current rank
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('rank')
-      .eq('id', userId)
-      .single();
-
-    if (userError) throw userError;
-
-    // Update rank
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
-        rank: newRank,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', userId);
-
-    if (updateError) throw updateError;
-
-    // Log admin action
-    await logAdminAction(userId, admin.id, 'rank_change', {
-      previous_rank: userData.rank,
-      new_rank: newRank,
-      reason,
-    });
+    // TODO: Create backend endpoint for rank change
+    // For now, return false
+    console.warn('changeUserRank not implemented yet');
+    return false;
   } catch (error: any) {
     console.error('Error changing user rank:', error);
-    throw new Error(error.message || 'Failed to change user rank');
+    throw error;
   }
 };
 
 /**
- * Suspend user account (admin action)
+ * Suspend user
  */
-export const suspendUser = async (userId: string, reason: string): Promise<void> => {
+export const suspendUser = async (userId: string, reason: string): Promise<boolean> => {
   try {
-        // Verify admin access
     await requireAdmin();
 
-const { data: { user: admin }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!admin) throw new Error('Admin not authenticated');
-
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
+    await apiRequest(`/api/admin/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
         is_active: false,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', userId);
+        reason,
+      }),
+    });
 
-    if (updateError) throw updateError;
-
-    // Log admin action
-    await logAdminAction(userId, admin.id, 'suspend_user', { reason });
+    return true;
   } catch (error: any) {
     console.error('Error suspending user:', error);
-    throw new Error(error.message || 'Failed to suspend user');
+    throw error;
   }
 };
 
 /**
- * Activate user account (admin action)
+ * Activate user
  */
-export const activateUser = async (userId: string): Promise<void> => {
+export const activateUser = async (userId: string): Promise<boolean> => {
   try {
-        // Verify admin access
     await requireAdmin();
 
-const { data: { user: admin }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!admin) throw new Error('Admin not authenticated');
-
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
+    await apiRequest(`/api/admin/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
         is_active: true,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', userId);
+      }),
+    });
 
-    if (updateError) throw updateError;
-
-    // Log admin action
-    await logAdminAction(userId, admin.id, 'activate_user', {});
+    return true;
   } catch (error: any) {
     console.error('Error activating user:', error);
-    throw new Error(error.message || 'Failed to activate user');
-  }
-};
-
-/**
- * Log admin action to database
- */
-const logAdminAction = async (
-  userId: string,
-  adminId: string,
-  action: string,
-  metadata: any
-): Promise<void> => {
-  try {
-    await supabase.from('admin_actions').insert({
-      user_id: userId,
-      admin_id: adminId,
-      action: action,
-      metadata: metadata,
-    });
-  } catch (error: any) {
-    console.warn('Failed to log admin action:', error);
-    // Don't throw error - logging failure shouldn't break the main action
-  }
-};
-
-/**
- * Get all users with filtering and pagination
- */
-export const getAllUsers = async (
-  filters?: {
-    search?: string;
-    status?: 'active' | 'inactive';
-    kyc_status?: string;
-    rank?: string;
-  },
-  page: number = 1,
-  pageSize: number = 20
-): Promise<{ users: UserDetailedInfo[]; total: number }> => {
-  try {
-    let query = supabase.from('users').select('*', { count: 'exact' });
-
-    // Apply filters
-    if (filters?.search) {
-      query = query.or(`email.ilike.%${filters.search}%,full_name.ilike.%${filters.search}%`);
-    }
-    if (filters?.status) {
-      query = query.eq('is_active', filters.status === 'active');
-    }
-    if (filters?.kyc_status) {
-      query = query.eq('kyc_status', filters.kyc_status);
-    }
-    if (filters?.rank) {
-      query = query.eq('rank', filters.rank);
-    }
-
-    // Apply pagination
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-    query = query.range(from, to);
-
-    // Execute query
-    const { data, error, count } = await query.order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    return {
-      users: data || [],
-      total: count || 0,
-    };
-  } catch (error: any) {
-    console.error('Error getting all users:', error);
-    throw new Error(error.message || 'Failed to get users');
-  }
-};
-
-/**
- * Cancel user package (admin action)
- */
-export const cancelUserPackage = async (
-  packageId: string,
-  reason: string
-): Promise<void> => {
-  try {
-        // Verify admin access
-    await requireAdmin();
-
-const { data: { user: admin }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!admin) throw new Error('Admin not authenticated');
-
-    // Get package details
-    const { data: packageData, error: packageError } = await supabase
-      .from('user_packages')
-      .select('user_id, package_id, amount_invested, status')
-      .eq('id', packageId)
-      .single();
-
-    if (packageError) throw packageError;
-    if (!packageData) throw new Error('Package not found');
-
-    // Update package status
-    const { error: updateError } = await supabase
-      .from('user_packages')
-      .update({
-        status: 'cancelled',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', packageId);
-
-    if (updateError) throw updateError;
-
-    // Log admin action
-    await logAdminAction(packageData.user_id, admin.id, 'cancel_package', {
-      package_id: packageId,
-      reason,
-    });
-  } catch (error: any) {
-    console.error('Error cancelling user package:', error);
-    throw new Error(error.message || 'Failed to cancel package');
-  }
-};
-
-/**
- * Manually assign package to user (admin action)
- */
-export const assignPackageToUser = async (
-  userId: string,
-  packageId: string,
-  amount: number,
-  reason: string
-): Promise<void> => {
-  try {
-        // Verify admin access
-    await requireAdmin();
-
-const { data: { user: admin }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!admin) throw new Error('Admin not authenticated');
-
-    // Get package details
-    const { data: pkg, error: pkgError } = await supabase
-      .from('packages')
-      .select('*')
-      .eq('id', packageId)
-      .single();
-
-    if (pkgError) throw pkgError;
-    if (!pkg) throw new Error('Package not found');
-
-    // Calculate package returns
-    const dailyReturn = (amount * pkg.daily_return_percentage) / 100;
-    const totalReturn = (amount * pkg.max_return_percentage) / 100;
-    const startDate = new Date();
-    const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + pkg.duration_days);
-
-    // Create user package subscription
-    const { data: userPackage, error: packageError } = await supabase
-      .from('user_packages')
-      .insert({
-        user_id: userId,
-        package_id: packageId,
-        amount_invested: amount,
-        start_date: startDate.toISOString(),
-        end_date: endDate.toISOString(),
-        daily_return: dailyReturn,
-        total_return: totalReturn,
-        claimed_return: 0,
-        status: 'active',
-      })
-      .select()
-      .single();
-
-    if (packageError) throw packageError;
-
-    // Update user's total investment
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('total_investment')
-      .eq('id', userId)
-      .single();
-
-    if (!userError && userData) {
-      await supabase
-        .from('users')
-        .update({
-          total_investment: (userData.total_investment || 0) + amount,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId);
-    }
-
-    // Create transaction record
-    await supabase.from('mlm_transactions').insert({
-      user_id: userId,
-      transaction_type: 'package_purchase',
-      amount: -amount, // Negative because it's a deduction (even though admin assigned)
-      status: 'completed',
-      metadata: {
-        package_id: packageId,
-        package_name: pkg.name,
-        user_package_id: userPackage.id,
-        daily_return: dailyReturn,
-        total_return: totalReturn,
-        duration_days: pkg.duration_days,
-        admin_assigned: true,
-        admin_id: admin.id,
-        reason: reason,
-      },
-    });
-
-    // Log admin action
-    await logAdminAction(userId, admin.id, 'assign_package', {
-      package_id: packageId,
-      package_name: pkg.name,
-      amount,
-      reason,
-    });
-  } catch (error: any) {
-    console.error('Error assigning package to user:', error);
-    throw new Error(error.message || 'Failed to assign package');
-  }
-};
-
-/**
- * Create manual transaction (admin action)
- */
-export const createManualTransaction = async (
-  userId: string,
-  transactionType: string,
-  amount: number,
-  description: string
-): Promise<void> => {
-  try {
-        // Verify admin access
-    await requireAdmin();
-
-const { data: { user: admin }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!admin) throw new Error('Admin not authenticated');
-
-    // If it's a credit/debit transaction, update wallet balance
-    if (transactionType === 'admin_credit' || transactionType === 'admin_debit') {
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('wallet_balance')
-        .eq('id', userId)
-        .single();
-
-      if (userError) throw userError;
-
-      const newBalance = userData.wallet_balance + amount;
-
-      await supabase
-        .from('users')
-        .update({
-          wallet_balance: newBalance,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId);
-    }
-
-    // Create transaction record
-    await supabase.from('mlm_transactions').insert({
-      user_id: userId,
-      transaction_type: transactionType,
-      amount: amount,
-      status: 'completed',
-      metadata: {
-        description: description,
-        admin_created: true,
-        admin_id: admin.id,
-      },
-    });
-
-    // Log admin action
-    await logAdminAction(userId, admin.id, 'create_manual_transaction', {
-      transaction_type: transactionType,
-      amount,
-      description,
-    });
-  } catch (error: any) {
-    console.error('Error creating manual transaction:', error);
-    throw new Error(error.message || 'Failed to create transaction');
+    throw error;
   }
 };

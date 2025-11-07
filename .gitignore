@@ -120,3 +120,4 @@ ecosystem.config.json
 secrets/
 .secrets/
 keys/
+QA_TEST_REPORT.md

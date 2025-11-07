@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { Button, Card, Badge } from '../../components/ui/DesignSystem';
 import { Modal } from '../../components/ui/Modal';
-import { supabase } from '../../services/supabase.client';
+
 import { getWalletBalance, type WalletBalance } from '../../services/wallet.service';
 import { purchasePackage } from '../../services/package.service';
 

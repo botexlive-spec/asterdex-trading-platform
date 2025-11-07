@@ -3,7 +3,7 @@
  * Handles all package-related operations including purchase, claims, and stats
  */
 
-import { supabase } from './supabase.client';
+
 import {
   Package,
   UserPackage,

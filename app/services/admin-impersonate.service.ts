@@ -1,4 +1,3 @@
-import { supabase } from './supabase.client';
 
 /**
  * Impersonate a user (admin only)

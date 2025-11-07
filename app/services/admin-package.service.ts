@@ -1,9 +1,9 @@
 /**
  * Admin Package Service - Complete MLM Package Management
- * Handles packages, commission levels, analytics
+ * Uses Express MySQL backend API
  */
 
-import { supabase } from './supabase.client';
+import { requireAdmin } from '../middleware/admin.middleware';
 
 // ============================================
 // TYPES & INTERFACES
@@ -12,30 +12,34 @@ import { supabase } from './supabase.client';
 export interface Package {
   id: string;
   name: string;
-  description: string;
-  price: number;
+  description?: string;
+  price?: number;
   min_investment: number;
   max_investment: number;
-  daily_return_percentage: number;
-  max_return_percentage: number;
+  daily_roi_percentage: number;
+  daily_return_percentage?: number; // alias for compatibility
+  max_return_percentage?: number;
   duration_days: number;
-  level_depth: number;
-  binary_bonus_percentage: number;
-  direct_commission_percentage: number;
-  binary_volume_multiplier: number;
-  features: string[];
+  level_depth?: number;
+  binary_bonus_percentage?: number;
+  direct_commission_percentage?: number;
+  binary_volume_multiplier?: number;
+  features?: string[];
   status: 'active' | 'inactive';
-  is_popular: boolean;
-  sort_order: number;
+  is_active?: boolean; // MySQL uses is_active
+  is_popular?: boolean;
+  sort_order?: number;
   image_url?: string;
-  allow_multiple_purchases: boolean;
-  allow_upgrades: boolean;
-  auto_renewal: boolean;
+  allow_multiple_purchases?: boolean;
+  allow_upgrades?: boolean;
+  auto_renewal?: boolean;
   min_rank_required?: string;
-  kyc_required: boolean;
-  robot_required: boolean;
+  kyc_required?: boolean;
+  robot_required?: boolean;
+  level_income_percentages?: string | any[]; // MySQL stores as JSON string
+  matching_bonus_percentage?: number;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
 export interface PackageLevelCommission {
@@ -67,19 +71,20 @@ export interface PackageAnalytics {
 
 export interface CreatePackageData {
   name: string;
-  description: string;
-  price: number;
+  description?: string;
+  price?: number;
   min_investment: number;
   max_investment: number;
-  daily_return_percentage: number;
-  max_return_percentage: number;
+  daily_roi_percentage: number;
+  daily_return_percentage?: number;
+  max_return_percentage?: number;
   duration_days: number;
-  level_depth: number;
-  binary_bonus_percentage: number;
-  direct_commission_percentage: number;
+  level_depth?: number;
+  binary_bonus_percentage?: number;
+  direct_commission_percentage?: number;
   binary_volume_multiplier?: number;
-  features: string[];
-  is_popular: boolean;
+  features?: string[];
+  is_popular?: boolean;
   image_url?: string;
   allow_multiple_purchases?: boolean;
   allow_upgrades?: boolean;
@@ -87,217 +92,205 @@ export interface CreatePackageData {
   min_rank_required?: string;
   kyc_required?: boolean;
   robot_required?: boolean;
-  level_commissions: { level: number; percentage: number }[];
+  level_commissions?: { level: number; percentage: number }[];
+  level_income_percentages?: any[];
+  matching_bonus_percentage?: number;
+  is_active?: boolean;
 }
+
+/**
+ * Get API base URL
+ */
+const getApiUrl = (): string => {
+  return import.meta.env.VITE_API_URL || 'http://localhost:3001';
+};
+
+/**
+ * Get authentication token from storage
+ */
+const getAuthToken = (): string | null => {
+  return localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+};
+
+/**
+ * Make authenticated API request
+ */
+const apiRequest = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
+  const token = getAuthToken();
+
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+
+  const url = `${getApiUrl()}${endpoint}`;
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `API request failed: ${response.status}`);
+  }
+
+  return response.json();
+};
 
 // ============================================
 // PACKAGE CRUD OPERATIONS
 // ============================================
 
 export async function getAllPackages(): Promise<Package[]> {
-  const { data, error } = await supabase
-    .from('packages')
-    .select('*')
-    .order('sort_order', { ascending: true });
-
-  if (error) throw error;
-  return data || [];
+  try {
+    await requireAdmin();
+    const data = await apiRequest<{ packages: Package[] }>('/api/admin/packages');
+    return data.packages || [];
+  } catch (error: any) {
+    console.error('Error getting all packages:', error);
+    return [];
+  }
 }
 
 export async function getActivePackages(): Promise<Package[]> {
-  const { data, error } = await supabase
-    .from('packages')
-    .select('*')
-    .eq('status', 'active')
-    .order('sort_order', { ascending: true });
-
-  if (error) throw error;
-  return data || [];
+  try {
+    await requireAdmin();
+    const allPackages = await getAllPackages();
+    return allPackages.filter(pkg => pkg.is_active || pkg.status === 'active');
+  } catch (error: any) {
+    console.error('Error getting active packages:', error);
+    return [];
+  }
 }
 
 export async function getPackageById(id: string): Promise<Package | null> {
-  const { data, error } = await supabase
-    .from('packages')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error) throw error;
-  return data;
+  try {
+    await requireAdmin();
+    const allPackages = await getAllPackages();
+    return allPackages.find(pkg => pkg.id === id) || null;
+  } catch (error: any) {
+    console.error('Error getting package by ID:', error);
+    return null;
+  }
 }
 
 export async function createPackage(packageData: CreatePackageData): Promise<Package> {
-  // Get current max sort_order
-  const { data: packages } = await supabase
-    .from('packages')
-    .select('sort_order')
-    .order('sort_order', { ascending: false })
-    .limit(1);
+  try {
+    await requireAdmin();
 
-  const nextSortOrder = packages && packages.length > 0 ? packages[0].sort_order + 1 : 0;
-
-  // Create package
-  const { data: newPackage, error: packageError } = await supabase
-    .from('packages')
-    .insert({
+    const payload = {
       name: packageData.name,
-      description: packageData.description,
-      price: packageData.price,
       min_investment: packageData.min_investment,
       max_investment: packageData.max_investment,
-      daily_return_percentage: packageData.daily_return_percentage,
-      max_return_percentage: packageData.max_return_percentage,
+      daily_roi_percentage: packageData.daily_roi_percentage || packageData.daily_return_percentage,
       duration_days: packageData.duration_days,
-      level_depth: packageData.level_depth,
-      binary_bonus_percentage: packageData.binary_bonus_percentage,
-      direct_commission_percentage: packageData.direct_commission_percentage,
-      binary_volume_multiplier: packageData.binary_volume_multiplier || 1.0,
-      features: packageData.features,
-      status: 'active',
-      is_popular: packageData.is_popular,
-      sort_order: nextSortOrder,
-      image_url: packageData.image_url,
-      allow_multiple_purchases: packageData.allow_multiple_purchases ?? true,
-      allow_upgrades: packageData.allow_upgrades ?? true,
-      auto_renewal: packageData.auto_renewal ?? false,
-      min_rank_required: packageData.min_rank_required,
-      kyc_required: packageData.kyc_required ?? false,
-      robot_required: packageData.robot_required ?? false,
-    })
-    .select()
-    .single();
+      level_income_percentages: packageData.level_income_percentages || packageData.level_commissions || [],
+      matching_bonus_percentage: packageData.matching_bonus_percentage || 0,
+      is_active: packageData.is_active !== false,
+    };
 
-  if (packageError) throw packageError;
+    await apiRequest('/api/admin/packages', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
 
-  // Create level commissions
-  if (packageData.level_commissions && packageData.level_commissions.length > 0) {
-    const commissions = packageData.level_commissions.map(lc => ({
-      package_id: newPackage.id,
-      level: lc.level,
-      commission_percentage: lc.percentage,
-    }));
-
-    const { error: commissionsError } = await supabase
-      .from('package_level_commissions')
-      .insert(commissions);
-
-    if (commissionsError) throw commissionsError;
+    // Fetch updated packages list
+    const packages = await getAllPackages();
+    return packages[packages.length - 1]; // Return the newly created package
+  } catch (error: any) {
+    console.error('Error creating package:', error);
+    throw error;
   }
-
-  return newPackage;
 }
 
 export async function updatePackage(id: string, packageData: Partial<CreatePackageData>): Promise<Package> {
-  const updateData: any = {
-    ...packageData,
-    updated_at: new Date().toISOString(),
-  };
+  try {
+    await requireAdmin();
 
-  // Remove level_commissions from update data (handle separately)
-  const levelCommissions = updateData.level_commissions;
-  delete updateData.level_commissions;
+    const payload: any = {};
 
-  // Update package
-  const { data: updatedPackage, error: packageError } = await supabase
-    .from('packages')
-    .update(updateData)
-    .eq('id', id)
-    .select()
-    .single();
+    if (packageData.name !== undefined) payload.name = packageData.name;
+    if (packageData.min_investment !== undefined) payload.min_investment = packageData.min_investment;
+    if (packageData.max_investment !== undefined) payload.max_investment = packageData.max_investment;
+    if (packageData.daily_roi_percentage !== undefined) payload.daily_roi_percentage = packageData.daily_roi_percentage;
+    if (packageData.daily_return_percentage !== undefined) payload.daily_roi_percentage = packageData.daily_return_percentage;
+    if (packageData.duration_days !== undefined) payload.duration_days = packageData.duration_days;
+    if (packageData.level_income_percentages !== undefined) payload.level_income_percentages = packageData.level_income_percentages;
+    if (packageData.level_commissions !== undefined) payload.level_income_percentages = packageData.level_commissions;
+    if (packageData.matching_bonus_percentage !== undefined) payload.matching_bonus_percentage = packageData.matching_bonus_percentage;
+    if (packageData.is_active !== undefined) payload.is_active = packageData.is_active;
 
-  if (packageError) throw packageError;
+    await apiRequest(`/api/admin/packages/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
 
-  // Update level commissions if provided
-  if (levelCommissions && levelCommissions.length > 0) {
-    // Delete existing commissions
-    await supabase
-      .from('package_level_commissions')
-      .delete()
-      .eq('package_id', id);
+    const updatedPackage = await getPackageById(id);
+    if (!updatedPackage) throw new Error('Package not found after update');
 
-    // Insert new commissions
-    const commissions = levelCommissions.map((lc: any) => ({
-      package_id: id,
-      level: lc.level,
-      commission_percentage: lc.percentage,
-    }));
-
-    const { error: commissionsError } = await supabase
-      .from('package_level_commissions')
-      .insert(commissions);
-
-    if (commissionsError) throw commissionsError;
+    return updatedPackage;
+  } catch (error: any) {
+    console.error('Error updating package:', error);
+    throw error;
   }
-
-  return updatedPackage;
 }
 
 export async function deletePackage(id: string): Promise<void> {
-  // Check if package has any active user packages
-  const { data: userPackages, error: checkError } = await supabase
-    .from('user_packages')
-    .select('id')
-    .eq('package_id', id)
-    .eq('status', 'active')
-    .limit(1);
+  try {
+    await requireAdmin();
 
-  if (checkError) throw checkError;
+    await apiRequest(`/api/admin/packages/${id}`, {
+      method: 'DELETE',
+    });
 
-  if (userPackages && userPackages.length > 0) {
-    throw new Error('Cannot delete package with active subscriptions. Please deactivate first.');
+    console.log(`✅ Package ${id} deleted`);
+  } catch (error: any) {
+    console.error('Error deleting package:', error);
+    throw error;
   }
-
-  const { error } = await supabase
-    .from('packages')
-    .delete()
-    .eq('id', id);
-
-  if (error) throw error;
 }
 
 export async function togglePackageStatus(id: string): Promise<Package> {
-  // Get current status
-  const pkg = await getPackageById(id);
-  if (!pkg) throw new Error('Package not found');
+  try {
+    await requireAdmin();
 
-  const newStatus = pkg.status === 'active' ? 'inactive' : 'active';
+    // Get current package
+    const pkg = await getPackageById(id);
+    if (!pkg) throw new Error('Package not found');
 
-  const { data, error } = await supabase
-    .from('packages')
-    .update({ status: newStatus, updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .select()
-    .single();
+    const newStatus = (pkg.is_active || pkg.status === 'active') ? false : true;
 
-  if (error) throw error;
-  return data;
+    await apiRequest(`/api/admin/packages/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ is_active: newStatus }),
+    });
+
+    const updatedPackage = await getPackageById(id);
+    if (!updatedPackage) throw new Error('Package not found after update');
+
+    return updatedPackage;
+  } catch (error: any) {
+    console.error('Error toggling package status:', error);
+    throw error;
+  }
 }
 
 export async function reorderPackages(packageId: string, direction: 'up' | 'down'): Promise<void> {
-  const packages = await getAllPackages();
-  const currentIndex = packages.findIndex(p => p.id === packageId);
+  try {
+    await requireAdmin();
 
-  if (currentIndex === -1) throw new Error('Package not found');
-
-  const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-
-  if (targetIndex < 0 || targetIndex >= packages.length) {
-    throw new Error('Cannot move package further');
+    // Note: This requires backend support for reordering
+    // For now, this is a stub implementation
+    console.warn('Package reordering not yet implemented in backend');
+    // TODO: Implement backend endpoint for package reordering
+  } catch (error: any) {
+    console.error('Error reordering packages:', error);
+    throw error;
   }
-
-  const currentPackage = packages[currentIndex];
-  const targetPackage = packages[targetIndex];
-
-  // Swap sort orders
-  await supabase
-    .from('packages')
-    .update({ sort_order: targetPackage.sort_order })
-    .eq('id', currentPackage.id);
-
-  await supabase
-    .from('packages')
-    .update({ sort_order: currentPackage.sort_order })
-    .eq('id', targetPackage.id);
 }
 
 // ============================================
@@ -305,38 +298,56 @@ export async function reorderPackages(packageId: string, direction: 'up' | 'down
 // ============================================
 
 export async function getPackageLevelCommissions(packageId: string): Promise<PackageLevelCommission[]> {
-  const { data, error } = await supabase
-    .from('package_level_commissions')
-    .select('*')
-    .eq('package_id', packageId)
-    .order('level', { ascending: true });
+  try {
+    await requireAdmin();
 
-  if (error) throw error;
-  return data || [];
+    const pkg = await getPackageById(packageId);
+    if (!pkg) return [];
+
+    // Parse level_income_percentages from MySQL
+    let percentages: any[] = [];
+    if (typeof pkg.level_income_percentages === 'string') {
+      try {
+        percentages = JSON.parse(pkg.level_income_percentages);
+      } catch (e) {
+        percentages = [];
+      }
+    } else if (Array.isArray(pkg.level_income_percentages)) {
+      percentages = pkg.level_income_percentages;
+    }
+
+    // Convert to PackageLevelCommission format
+    return percentages.map((percentage, index) => ({
+      id: `${packageId}-level-${index + 1}`,
+      package_id: packageId,
+      level: index + 1,
+      commission_percentage: typeof percentage === 'number' ? percentage : parseFloat(percentage) || 0,
+    }));
+  } catch (error: any) {
+    console.error('Error getting package level commissions:', error);
+    return [];
+  }
 }
 
 export async function setPackageLevelCommissions(
   packageId: string,
   commissions: { level: number; percentage: number }[]
 ): Promise<void> {
-  // Delete existing
-  await supabase
-    .from('package_level_commissions')
-    .delete()
-    .eq('package_id', packageId);
+  try {
+    await requireAdmin();
 
-  // Insert new
-  const commissionsData = commissions.map(c => ({
-    package_id: packageId,
-    level: c.level,
-    commission_percentage: c.percentage,
-  }));
+    const percentages = commissions.map(c => c.percentage);
 
-  const { error } = await supabase
-    .from('package_level_commissions')
-    .insert(commissionsData);
+    await apiRequest(`/api/admin/packages/${packageId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ level_income_percentages: percentages }),
+    });
 
-  if (error) throw error;
+    console.log(`✅ Package level commissions updated for ${packageId}`);
+  } catch (error: any) {
+    console.error('Error setting package level commissions:', error);
+    throw error;
+  }
 }
 
 // ============================================
@@ -344,31 +355,29 @@ export async function setPackageLevelCommissions(
 // ============================================
 
 export async function getPackageAnalytics(packageId: string): Promise<PackageAnalytics | null> {
-  const { data, error } = await supabase
-    .from('package_analytics')
-    .select('*')
-    .eq('package_id', packageId)
-    .eq('analytics_date', new Date().toISOString().split('T')[0])
-    .single();
+  try {
+    await requireAdmin();
 
-  if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
-  return data;
+    // TODO: Implement backend endpoint for package analytics
+    console.warn('Package analytics not yet implemented');
+    return null;
+  } catch (error: any) {
+    console.error('Error getting package analytics:', error);
+    return null;
+  }
 }
 
 export async function getAllPackagesAnalytics(): Promise<Map<string, PackageAnalytics>> {
-  const { data, error } = await supabase
-    .from('package_analytics')
-    .select('*')
-    .eq('analytics_date', new Date().toISOString().split('T')[0]);
+  try {
+    await requireAdmin();
 
-  if (error) throw error;
-
-  const analyticsMap = new Map<string, PackageAnalytics>();
-  data?.forEach(analytics => {
-    analyticsMap.set(analytics.package_id, analytics);
-  });
-
-  return analyticsMap;
+    // TODO: Implement backend endpoint for package analytics
+    console.warn('Package analytics not yet implemented');
+    return new Map();
+  } catch (error: any) {
+    console.error('Error getting all packages analytics:', error);
+    return new Map();
+  }
 }
 
 // ============================================
@@ -376,47 +385,52 @@ export async function getAllPackagesAnalytics(): Promise<Map<string, PackageAnal
 // ============================================
 
 export async function getPackageFeatures(packageId: string): Promise<PackageFeature[]> {
-  const { data, error } = await supabase
-    .from('package_features')
-    .select('*')
-    .eq('package_id', packageId)
-    .order('display_order', { ascending: true });
+  try {
+    await requireAdmin();
 
-  if (error) throw error;
-  return data || [];
+    // TODO: Implement backend endpoint for package features
+    console.warn('Package features not yet implemented');
+    return [];
+  } catch (error: any) {
+    console.error('Error getting package features:', error);
+    return [];
+  }
 }
 
 export async function addPackageFeature(packageId: string, feature: Omit<PackageFeature, 'id' | 'package_id'>): Promise<PackageFeature> {
-  const { data, error } = await supabase
-    .from('package_features')
-    .insert({
-      package_id: packageId,
-      ...feature,
-    })
-    .select()
-    .single();
+  try {
+    await requireAdmin();
 
-  if (error) throw error;
-  return data;
+    // TODO: Implement backend endpoint for package features
+    console.warn('Package features not yet implemented');
+    throw new Error('Not implemented');
+  } catch (error: any) {
+    console.error('Error adding package feature:', error);
+    throw error;
+  }
 }
 
 export async function updatePackageFeature(featureId: string, updates: Partial<PackageFeature>): Promise<PackageFeature> {
-  const { data, error } = await supabase
-    .from('package_features')
-    .update(updates)
-    .eq('id', featureId)
-    .select()
-    .single();
+  try {
+    await requireAdmin();
 
-  if (error) throw error;
-  return data;
+    // TODO: Implement backend endpoint for package features
+    console.warn('Package features not yet implemented');
+    throw new Error('Not implemented');
+  } catch (error: any) {
+    console.error('Error updating package feature:', error);
+    throw error;
+  }
 }
 
 export async function deletePackageFeature(featureId: string): Promise<void> {
-  const { error } = await supabase
-    .from('package_features')
-    .delete()
-    .eq('id', featureId);
+  try {
+    await requireAdmin();
 
-  if (error) throw error;
+    // TODO: Implement backend endpoint for package features
+    console.warn('Package features not yet implemented');
+  } catch (error: any) {
+    console.error('Error deleting package feature:', error);
+    throw error;
+  }
 }
