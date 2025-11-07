@@ -67,6 +67,7 @@ const GenealogyNew: React.FC = () => {
   const [selectedParent, setSelectedParent] = useState<{ node: BinaryNode; position: 'left' | 'right' } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [d3Transform, setD3Transform] = useState<d3.ZoomTransform>(d3.zoomIdentity);
@@ -149,7 +150,7 @@ const GenealogyNew: React.FC = () => {
     };
 
     fetchBinaryTree();
-  }, [user?.id, maxLevel]);
+  }, [user?.id, maxLevel, refreshTrigger]);
 
   const nodeWidth = 200;
   const nodeHeight = 200;
@@ -2082,7 +2083,7 @@ const GenealogyNew: React.FC = () => {
 
                   // Refresh the tree to show the new member
                   console.log('🔄 Refreshing tree to show new member...');
-                  await fetchBinaryTree();
+                  setRefreshTrigger(prev => prev + 1);
                 } catch (error: any) {
                   console.error('❌ Error creating member:', error);
                   toast.error(error.message || 'Failed to create member');
