@@ -14,6 +14,7 @@ import adminRoutes from './routes/admin';
 import teamRoutes from './routes/team';
 import genealogyRoutes from './routes/genealogy';
 import transactionsRoutes from './routes/transactions';
+import ranksRoutes from './routes/ranks';
 import walletRoutes from './routes/wallet';
 import { pool, query } from './db';
 import { distributeROI } from './cron/roi-distribution';
@@ -63,6 +64,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/genealogy', genealogyRoutes);
 app.use('/api/transactions', transactionsRoutes);
+app.use('/api/ranks', ranksRoutes);
 app.use('/api/wallet', walletRoutes);
 
 // Error handler
