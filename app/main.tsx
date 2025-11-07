@@ -43,7 +43,7 @@ const Register = lazy(() => import('./pages/auth/Register'));
 const UserDashboard = lazy(() => import('./pages/user/DashboardNew'));
 
 // User Pages
-const Packages = lazy(() => import('./pages/user/PackagesEnhanced'));
+const Packages = lazy(() => import('./pages/user/Packages')); // Changed from PackagesEnhanced (broken)
 const Robot = lazy(() => import('./pages/user/RobotNew'));
 const KYC = lazy(() => import('./pages/user/KYCNew'));
 const Wallet = lazy(() => import('./pages/user/WalletNew'));
