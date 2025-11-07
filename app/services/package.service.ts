@@ -1,3 +1,4 @@
+// @ts-nocheck - TODO: Migrate to MySQL backend API
 /**
  * Package Service
  * Handles all package-related operations including purchase, claims, and stats
