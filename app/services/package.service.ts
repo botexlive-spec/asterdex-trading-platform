@@ -1,10 +1,10 @@
-// @ts-nocheck - TODO: Migrate to MySQL backend API
 /**
  * Package Service
- * Handles all package-related operations including purchase, claims, and stats
+ * Handles all package-related operations using MySQL backend API
+ * Migrated from Supabase to Express/MySQL backend
  */
 
-
+import apiClient from '../utils/api-client';
 import {
   Package,
   UserPackage,
@@ -20,25 +20,33 @@ import {
  */
 export const getAvailablePackages = async (): Promise<Package[]> => {
   try {
-    console.log('🔍 Fetching available packages...');
-    const { data, error } = await supabase
-      .from('packages')
-      .select('*')
-      .eq('status', 'active')  // Changed from 'is_active' to 'status'
-      .order('price', { ascending: true });
+    console.log('🔍 Fetching available packages from backend...');
 
-    if (error) {
-      console.error('❌ Error fetching packages:', error);
-      throw error;
+    const response = await apiClient.get<{ packages: any[] }>('/packages');
+
+    if (response.error) {
+      console.error('❌ Error fetching packages:', response.error);
+      throw new Error(response.error);
     }
 
-    console.log(`✅ Found ${data?.length || 0} active packages`);
+    const packages = response.data?.packages || [];
+    console.log(`✅ Found ${packages.length} active packages`);
 
     // Calculate return values for each package
-    const packagesWithCalculations = (data || []).map((pkg: Package) => ({
-      ...pkg,
-      daily_return: (pkg.price * pkg.daily_return_percentage) / 100,
-      total_return: (pkg.price * (pkg.max_return_percentage || 100)) / 100,
+    const packagesWithCalculations = packages.map((pkg: any) => ({
+      id: pkg.id,
+      name: pkg.name,
+      min_investment: pkg.min_investment,
+      max_investment: pkg.max_investment,
+      daily_return_percentage: pkg.daily_roi_percentage,
+      max_return_percentage: 200, // 200% total return (2x investment)
+      duration_days: pkg.duration_days,
+      level_income_percentages: pkg.level_income_percentages || [],
+      matching_bonus_percentage: pkg.matching_bonus_percentage,
+      is_active: pkg.is_active,
+      price: pkg.min_investment, // For compatibility
+      daily_return: (pkg.min_investment * pkg.daily_roi_percentage) / 100,
+      total_return: pkg.min_investment * 2, // 200% return
     }));
 
     return packagesWithCalculations;
@@ -53,21 +61,12 @@ export const getAvailablePackages = async (): Promise<Package[]> => {
  */
 export const getPackageById = async (packageId: string): Promise<Package | null> => {
   try {
-    const { data, error } = await supabase
-      .from('packages')
-      .select('*')
-      .eq('id', packageId)
-      .eq('is_active', true)
-      .maybeSingle();
+    const packages = await getAvailablePackages();
+    const pkg = packages.find(p => p.id === packageId);
 
-    if (error) throw error;
-    if (!data) return null;
+    if (!pkg) return null;
 
-    return {
-      ...data,
-      daily_return: (data.price * data.daily_return_percentage) / 100,
-      total_return: (data.price * data.max_return_percentage) / 100,
-    };
+    return pkg;
   } catch (error: any) {
     console.error('Error fetching package:', error);
     throw new Error(error.message || 'Failed to load package');
@@ -81,109 +80,45 @@ export const purchasePackage = async (
   request: PackagePurchaseRequest
 ): Promise<PackagePurchaseResponse> => {
   try {
-    // Get current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!user) throw new Error('User not authenticated');
+    console.log('🛒 Purchasing package:', request);
 
-    // Verify payment password
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: user.email!,
-      password: request.payment_password,
+    // Call backend API to purchase package
+    const response = await apiClient.post<{
+      success: boolean;
+      message: string;
+      package: any;
+    }>('/packages/purchase', {
+      package_id: request.package_id,
+      investment_amount: request.amount,
     });
-    if (signInError) throw new Error('Invalid payment password');
 
-    // Get package details
-    const pkg = await getPackageById(request.package_id);
-    if (!pkg) throw new Error('Package not found');
-
-    // Validate investment amount
-    if (request.amount < (pkg.min_investment || pkg.price)) {
-      throw new Error(`Minimum investment is ${pkg.min_investment || pkg.price}`);
-    }
-    if (pkg.max_investment && request.amount > pkg.max_investment) {
-      throw new Error(`Maximum investment is ${pkg.max_investment}`);
+    if (response.error) {
+      throw new Error(response.error);
     }
 
-    // Get user's wallet balance
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('wallet_balance, total_investment')
-      .eq('id', user.id)
-      .single();
+    const result = response.data!;
 
-    if (userError) throw userError;
+    console.log('✅ Package purchased successfully');
 
-    // Check if user has sufficient balance
-    if (userData.wallet_balance < request.amount) {
-      throw new Error('Insufficient wallet balance');
-    }
-
-    // Calculate package returns
-    const dailyReturn = (request.amount * pkg.daily_return_percentage) / 100;
-    const totalReturn = (request.amount * pkg.max_return_percentage) / 100;
-    const startDate = new Date();
-    const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + pkg.duration_days);
-
-    // Start transaction: Deduct from wallet
-    const newBalance = userData.wallet_balance - request.amount;
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
-        wallet_balance: newBalance,
-        total_investment: (userData.total_investment || 0) + request.amount,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', user.id);
-
-    if (updateError) throw updateError;
-
-    // Create user package subscription
-    const { data: userPackage, error: packageError } = await supabase
-      .from('user_packages')
-      .insert({
-        user_id: user.id,
+    // Map backend response to frontend format
+    return {
+      user_package: {
+        id: result.package.name, // Use name as temporary ID
+        user_id: '', // Backend doesn't return this
         package_id: request.package_id,
-        amount_invested: request.amount,
-        start_date: startDate.toISOString(),
-        end_date: endDate.toISOString(),
-        daily_return: dailyReturn,
-        total_return: totalReturn,
+        package: result.package,
+        amount_invested: result.package.investment_amount,
+        start_date: new Date().toISOString(),
+        end_date: result.package.expiry_date,
+        daily_return: result.package.daily_roi,
+        total_return: result.package.total_roi_limit,
         claimed_return: 0,
         status: 'active',
-      })
-      .select()
-      .single();
-
-    if (packageError) throw packageError;
-
-    // Create transaction record
-    const { data: transaction, error: txError } = await supabase
-      .from('mlm_transactions')
-      .insert({
-        user_id: user.id,
-        transaction_type: 'package_purchase',
-        amount: -request.amount, // Negative because it's a deduction
-        status: 'completed',
-        metadata: {
-          package_id: request.package_id,
-          package_name: pkg.name,
-          user_package_id: userPackage.id,
-          daily_return: dailyReturn,
-          total_return: totalReturn,
-          duration_days: pkg.duration_days,
-        },
-      })
-      .select()
-      .single();
-
-    if (txError) throw txError;
-
-    return {
-      user_package: { ...userPackage, package: pkg },
-      transaction_id: transaction.id,
-      message: `Successfully purchased ${pkg.name}! Daily returns will be available to claim.`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      transaction_id: 'tx_' + Date.now(), // Backend doesn't return transaction ID
+      message: result.message,
     };
   } catch (error: any) {
     console.error('Error purchasing package:', error);
@@ -198,28 +133,47 @@ export const getUserPackages = async (
   status?: 'active' | 'completed' | 'cancelled' | 'paused'
 ): Promise<UserPackage[]> => {
   try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!user) throw new Error('User not authenticated');
+    console.log('🔍 Fetching user packages...');
 
-    let query = supabase
-      .from('user_packages')
-      .select(`
-        *,
-        package:packages (*)
-      `)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    const response = await apiClient.get<{ packages: any[] }>('/packages/my-packages');
 
-    if (status) {
-      query = query.eq('status', status);
+    if (response.error) {
+      throw new Error(response.error);
     }
 
-    const { data, error } = await query;
+    const packages = response.data?.packages || [];
+    console.log(`✅ Found ${packages.length} user packages`);
 
-    if (error) throw error;
+    // Map backend format to frontend format
+    const mappedPackages = packages.map((pkg: any) => ({
+      id: pkg.id,
+      user_id: '', // Backend doesn't return this
+      package_id: pkg.package_id || '',
+      package: {
+        id: pkg.package_id || '',
+        name: pkg.package_name,
+        price: pkg.investment_amount,
+        daily_return_percentage: (pkg.daily_roi_amount / pkg.investment_amount) * 100,
+        duration_days: pkg.days_remaining || 0,
+      },
+      amount_invested: pkg.investment_amount,
+      start_date: pkg.activation_date,
+      end_date: pkg.expiry_date,
+      daily_return: pkg.daily_roi_amount,
+      total_return: pkg.total_roi_limit,
+      claimed_return: pkg.total_roi_earned,
+      last_claim_date: null, // Backend doesn't track this
+      status: pkg.status,
+      created_at: pkg.activation_date,
+      updated_at: pkg.activation_date,
+    }));
 
-    return data || [];
+    // Filter by status if provided
+    if (status) {
+      return mappedPackages.filter(pkg => pkg.status === status);
+    }
+
+    return mappedPackages;
   } catch (error: any) {
     console.error('Error fetching user packages:', error);
     throw new Error(error.message || 'Failed to load your packages');
@@ -228,6 +182,7 @@ export const getUserPackages = async (
 
 /**
  * Calculate available returns to claim for a user package
+ * This is client-side calculation based on the last claim date
  */
 export const calculateAvailableReturns = (userPackage: UserPackage): number => {
   try {
@@ -266,94 +221,33 @@ export const calculateAvailableReturns = (userPackage: UserPackage): number => {
 
 /**
  * Claim available returns from a user package
+ * NOTE: This endpoint needs to be added to the backend
  */
 export const claimPackageReturns = async (
   request: PackageClaimRequest
 ): Promise<PackageClaimResponse> => {
   try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!user) throw new Error('User not authenticated');
+    console.log('💰 Claiming package returns:', request);
 
-    // Get user package
-    const { data: userPackage, error: packageError } = await supabase
-      .from('user_packages')
-      .select('*')
-      .eq('id', request.user_package_id)
-      .eq('user_id', user.id)
-      .single();
+    // TODO: Backend endpoint needed: POST /api/packages/claim-returns
+    // For now, return error message
+    throw new Error('Claim returns feature is not yet implemented in backend. Please contact support.');
 
-    if (packageError) throw packageError;
-    if (!userPackage) throw new Error('Package not found');
+    /* When backend endpoint is ready, uncomment this:
+    const response = await apiClient.post<{
+      claimed_amount: number;
+      transaction_id: string;
+      new_wallet_balance: number;
+    }>('/packages/claim-returns', {
+      user_package_id: request.user_package_id,
+    });
 
-    // Calculate available returns
-    const availableReturn = calculateAvailableReturns(userPackage);
-
-    if (availableReturn <= 0) {
-      throw new Error('No returns available to claim');
+    if (response.error) {
+      throw new Error(response.error);
     }
 
-    // Get current user balance
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('wallet_balance')
-      .eq('id', user.id)
-      .single();
-
-    if (userError) throw userError;
-
-    // Add returns to wallet
-    const newBalance = userData.wallet_balance + availableReturn;
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
-        wallet_balance: newBalance,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', user.id);
-
-    if (updateError) throw updateError;
-
-    // Update user package
-    const newClaimedReturn = userPackage.claimed_return + availableReturn;
-    const isCompleted = newClaimedReturn >= userPackage.total_return;
-
-    const { error: updatePackageError } = await supabase
-      .from('user_packages')
-      .update({
-        claimed_return: newClaimedReturn,
-        last_claim_date: new Date().toISOString(),
-        status: isCompleted ? 'completed' : 'active',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', request.user_package_id);
-
-    if (updatePackageError) throw updatePackageError;
-
-    // Create transaction record
-    const { data: transaction, error: txError } = await supabase
-      .from('mlm_transactions')
-      .insert({
-        user_id: user.id,
-        transaction_type: 'package_return',
-        amount: availableReturn,
-        status: 'completed',
-        metadata: {
-          user_package_id: request.user_package_id,
-          claimed_amount: availableReturn,
-          total_claimed: newClaimedReturn,
-        },
-      })
-      .select()
-      .single();
-
-    if (txError) throw txError;
-
-    return {
-      claimed_amount: availableReturn,
-      transaction_id: transaction.id,
-      new_wallet_balance: newBalance,
-    };
+    return response.data!;
+    */
   } catch (error: any) {
     console.error('Error claiming returns:', error);
     throw new Error(error.message || 'Failed to claim returns');
@@ -365,17 +259,10 @@ export const claimPackageReturns = async (
  */
 export const getPackageStats = async (): Promise<PackageStats> => {
   try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!user) throw new Error('User not authenticated');
+    console.log('📊 Calculating package stats...');
 
     // Get all user packages
-    const { data: packages, error: packagesError } = await supabase
-      .from('user_packages')
-      .select('*')
-      .eq('user_id', user.id);
-
-    if (packagesError) throw packagesError;
+    const packages = await getUserPackages();
 
     // Calculate stats
     const stats: PackageStats = {
@@ -385,7 +272,7 @@ export const getPackageStats = async (): Promise<PackageStats> => {
       available_to_claim: 0,
     };
 
-    packages?.forEach((pkg: UserPackage) => {
+    packages.forEach((pkg: UserPackage) => {
       stats.total_invested += pkg.amount_invested;
 
       if (pkg.status === 'active') {
@@ -396,6 +283,7 @@ export const getPackageStats = async (): Promise<PackageStats> => {
       stats.total_earned += pkg.claimed_return;
     });
 
+    console.log('✅ Package stats calculated:', stats);
     return stats;
   } catch (error: any) {
     console.error('Error fetching package stats:', error);
@@ -408,21 +296,9 @@ export const getPackageStats = async (): Promise<PackageStats> => {
  */
 export const getFeaturedPackages = async (): Promise<Package[]> => {
   try {
-    const { data, error } = await supabase
-      .from('packages')
-      .select('*')
-      .eq('is_active', true)
-      .eq('is_featured', true)
-      .order('sort_order', { ascending: true })
-      .limit(3);
-
-    if (error) throw error;
-
-    return (data || []).map((pkg: Package) => ({
-      ...pkg,
-      daily_return: (pkg.price * pkg.daily_return_percentage) / 100,
-      total_return: (pkg.price * pkg.max_return_percentage) / 100,
-    }));
+    // Get all packages and return top 3
+    const packages = await getAvailablePackages();
+    return packages.slice(0, 3);
   } catch (error: any) {
     console.error('Error fetching featured packages:', error);
     throw new Error(error.message || 'Failed to load featured packages');
@@ -437,12 +313,6 @@ export const canPurchasePackage = async (
   amount: number
 ): Promise<{ canPurchase: boolean; reason?: string }> => {
   try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!user) {
-      return { canPurchase: false, reason: 'User not authenticated' };
-    }
-
     // Get package
     const pkg = await getPackageById(packageId);
     if (!pkg) {
@@ -463,19 +333,19 @@ export const canPurchasePackage = async (
       };
     }
 
-    // Get wallet balance
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('wallet_balance')
-      .eq('id', user.id)
-      .single();
+    // Get wallet balance from dashboard API
+    const dashboardResponse = await apiClient.get<{ user: { wallet_balance: number } }>('/dashboard');
 
-    if (userError) throw userError;
+    if (dashboardResponse.error) {
+      return { canPurchase: false, reason: 'Failed to verify balance' };
+    }
 
-    if (userData.wallet_balance < amount) {
+    const walletBalance = dashboardResponse.data?.user?.wallet_balance || 0;
+
+    if (walletBalance < amount) {
       return {
         canPurchase: false,
-        reason: `Insufficient balance. You need ${amount - userData.wallet_balance} more.`,
+        reason: `Insufficient balance. You need ${amount - walletBalance} more.`,
       };
     }
 
