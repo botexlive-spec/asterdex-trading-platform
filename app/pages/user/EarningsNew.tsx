@@ -3,7 +3,7 @@ import { Card, Button, Badge } from '../../components/ui/DesignSystem';
 import { Helmet } from 'react-helmet-async';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { getUserDashboard, getTransactionHistory } from '../../services/mlm.service';
+import { getUserDashboard, getTransactionHistory } from '../../services/mlm-client';
 import { useAuth } from "../../context/AuthContext";
 
 interface EarningRecord {
