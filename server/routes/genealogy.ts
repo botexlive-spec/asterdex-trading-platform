@@ -504,7 +504,7 @@ router.post('/add-member', authenticateToken, async (req: Request, res: Response
     const updateField = position === 'left' ? 'left_child_id' : 'right_child_id';
     await query(
       `UPDATE binary_tree SET ${updateField} = ? WHERE id = ?`,
-      [nodeId, parentNode.id]
+      [userId, parentNode.id]
     );
 
     console.log(`✅ [Genealogy] Placed user at ${position} of parent ${parentId}`);
