@@ -113,7 +113,7 @@ export async function getTeamMembers(): Promise<TeamResponse> {
     console.log('🔍 [Team Service] Fetching team members from MySQL API...');
     const startTime = Date.now();
 
-    const data = await apiRequest<TeamResponse>('/api/team/members');
+    const data = await apiRequest<TeamResponse>('/team/members');
 
     const loadTime = Date.now() - startTime;
     console.log(`✅ [Team Service] Loaded ${data.summary.total_team} members in ${loadTime}ms`);
@@ -133,7 +133,7 @@ export async function getDirectReferrals(): Promise<TeamMember[]> {
   try {
     console.log('🔍 [Team Service] Fetching direct referrals...');
 
-    const data = await apiRequest<{ success: boolean; count: number; members: TeamMember[] }>('/api/team/direct');
+    const data = await apiRequest<{ success: boolean; count: number; members: TeamMember[] }>('/team/direct');
 
     console.log(`✅ [Team Service] Found ${data.count} direct referrals`);
     return data.members;
@@ -155,7 +155,7 @@ export async function getTeamStats(): Promise<{ direct_members: number; total_te
       direct_members: number;
       total_team: number;
       team_investment: number;
-    }>('/api/team/stats');
+    }>('/team/stats');
 
     console.log(`✅ [Team Service] Stats loaded - Direct: ${data.direct_members}, Total: ${data.total_team}`);
     return data;

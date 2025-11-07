@@ -116,7 +116,7 @@ export async function initializeBinaryNode(): Promise<{ success: boolean; nodeId
     console.log('🌱 [Genealogy] Initializing binary node...');
 
     const response = await apiRequest<{ success: boolean; nodeId: string; message: string }>(
-      '/api/genealogy/initialize',
+      '/genealogy/initialize',
       { method: 'POST' }
     );
 
@@ -140,7 +140,7 @@ export async function placeMemberInTree(
     console.log(`🎯 [Genealogy] Placing member ${memberId} under ${parentId} at ${position}...`);
 
     const response = await apiRequest<{ success: boolean; nodeId: string; message: string }>(
-      '/api/genealogy/place-member',
+      '/genealogy/place-member',
       {
         method: 'POST',
         body: JSON.stringify({ memberId, parentId, position }),
@@ -182,7 +182,7 @@ export async function getBinaryTreeStats(): Promise<BinaryTreeStats> {
     console.log('📊 [Genealogy] Fetching binary tree stats...');
 
     const response = await apiRequest<{ success: boolean; stats: BinaryTreeStats }>(
-      '/api/genealogy/stats'
+      '/genealogy/stats'
     );
 
     console.log(`✅ [Genealogy] Stats loaded:`, response.stats);
@@ -296,7 +296,7 @@ export async function createMember(data: CreateMemberData): Promise<CreateMember
       position: data.position,
     });
 
-    const response = await apiRequest<CreateMemberResponse>('/api/genealogy/add-member', {
+    const response = await apiRequest<CreateMemberResponse>('/genealogy/add-member', {
       method: 'POST',
       body: JSON.stringify(data),
     });

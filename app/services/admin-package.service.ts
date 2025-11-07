@@ -148,7 +148,7 @@ const apiRequest = async <T>(endpoint: string, options: RequestInit = {}): Promi
 export async function getAllPackages(): Promise<Package[]> {
   try {
     await requireAdmin();
-    const data = await apiRequest<{ packages: Package[] }>('/api/admin/packages');
+    const data = await apiRequest<{ packages: Package[] }>('/admin/packages');
     return data.packages || [];
   } catch (error: any) {
     console.error('Error getting all packages:', error);
@@ -193,7 +193,7 @@ export async function createPackage(packageData: CreatePackageData): Promise<Pac
       is_active: packageData.is_active !== false,
     };
 
-    await apiRequest('/api/admin/packages', {
+    await apiRequest('/admin/packages', {
       method: 'POST',
       body: JSON.stringify(payload),
     });

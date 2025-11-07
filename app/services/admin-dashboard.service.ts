@@ -130,7 +130,7 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
     const startTime = Date.now();
 
     // Call the analytics overview endpoint
-    const data = await apiRequest<any>('/api/admin/analytics/overview');
+    const data = await apiRequest<any>('/admin/analytics/overview');
 
     const loadTime = Date.now() - startTime;
     console.log(`✅ Dashboard stats loaded in ${loadTime}ms`);
@@ -280,7 +280,7 @@ export const getGrowthChartData = async (days: number = 30) => {
     await requireAdmin();
 
     // Get all users and group by date
-    const data = await apiRequest<any>('/api/admin/users?limit=10000');
+    const data = await apiRequest<any>('/admin/users?limit=10000');
     const users = data.users || [];
 
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -326,7 +326,7 @@ export const getRevenueChartData = async (days: number = 30) => {
 
     // Fallback: calculate from transactions
     const transactions = await safeQuery(async () => {
-      const txnData = await apiRequest<any>('/api/admin/transactions?limit=10000');
+      const txnData = await apiRequest<any>('/admin/transactions?limit=10000');
       return txnData.transactions || [];
     }, []);
 
