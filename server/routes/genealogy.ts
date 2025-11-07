@@ -82,42 +82,30 @@ async function buildBinaryTree(userId: string, depth: number = 5, currentDepth: 
 
   // Recursively get left and right children
   if (node?.left_child_id) {
-    // Get the user ID from the left child node
-    const leftNodeResult = await query(
-      'SELECT user_id FROM binary_tree WHERE id = ?',
-      [node.left_child_id]
-    );
-    console.log(`  🔍 [Genealogy] Left child node ${node.left_child_id} → user:`, leftNodeResult.rows[0]?.user_id);
-    if (leftNodeResult.rows && leftNodeResult.rows.length > 0) {
-      const leftUserId = leftNodeResult.rows[0].user_id;
-      const leftChild = await buildBinaryTree(leftUserId, depth, currentDepth + 1);
-      if (leftChild) {
-        leftChild.position = 'left';
-        treeNode.children.push(leftChild);
-        console.log(`  ✅ [Genealogy] Added left child:`, leftChild.email, `(investment: $${leftChild.total_investment})`);
-        // Calculate left volume: child's investment + child's total volume
-        treeNode.left_volume = leftChild.total_investment + leftChild.left_volume + leftChild.right_volume;
-      }
+    // left_child_id now stores the user_id directly
+    const leftUserId = node.left_child_id;
+    console.log(`  🔍 [Genealogy] Left child user ID:`, leftUserId);
+    const leftChild = await buildBinaryTree(leftUserId, depth, currentDepth + 1);
+    if (leftChild) {
+      leftChild.position = 'left';
+      treeNode.children.push(leftChild);
+      console.log(`  ✅ [Genealogy] Added left child:`, leftChild.email, `(investment: $${leftChild.total_investment})`);
+      // Calculate left volume: child's investment + child's total volume
+      treeNode.left_volume = leftChild.total_investment + leftChild.left_volume + leftChild.right_volume;
     }
   }
 
   if (node?.right_child_id) {
-    // Get the user ID from the right child node
-    const rightNodeResult = await query(
-      'SELECT user_id FROM binary_tree WHERE id = ?',
-      [node.right_child_id]
-    );
-    console.log(`  🔍 [Genealogy] Right child node ${node.right_child_id} → user:`, rightNodeResult.rows[0]?.user_id);
-    if (rightNodeResult.rows && rightNodeResult.rows.length > 0) {
-      const rightUserId = rightNodeResult.rows[0].user_id;
-      const rightChild = await buildBinaryTree(rightUserId, depth, currentDepth + 1);
-      if (rightChild) {
-        rightChild.position = 'right';
-        treeNode.children.push(rightChild);
-        console.log(`  ✅ [Genealogy] Added right child:`, rightChild.email, `(investment: $${rightChild.total_investment})`);
-        // Calculate right volume: child's investment + child's total volume
-        treeNode.right_volume = rightChild.total_investment + rightChild.left_volume + rightChild.right_volume;
-      }
+    // right_child_id now stores the user_id directly
+    const rightUserId = node.right_child_id;
+    console.log(`  🔍 [Genealogy] Right child user ID:`, rightUserId);
+    const rightChild = await buildBinaryTree(rightUserId, depth, currentDepth + 1);
+    if (rightChild) {
+      rightChild.position = 'right';
+      treeNode.children.push(rightChild);
+      console.log(`  ✅ [Genealogy] Added right child:`, rightChild.email, `(investment: $${rightChild.total_investment})`);
+      // Calculate right volume: child's investment + child's total volume
+      treeNode.right_volume = rightChild.total_investment + rightChild.left_volume + rightChild.right_volume;
     }
   }
 
