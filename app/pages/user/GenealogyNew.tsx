@@ -61,12 +61,14 @@ const GenealogyNew: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [maxLevel, setMaxLevel] = useState(5);
   const [hoveredNode, setHoveredNode] = useState<BinaryNode | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [selectedParent, setSelectedParent] = useState<{ node: BinaryNode; position: 'left' | 'right' } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [d3Transform, setD3Transform] = useState<d3.ZoomTransform>(d3.zoomIdentity);
 
 
@@ -1062,10 +1064,16 @@ const GenealogyNew: React.FC = () => {
           key={`link-${idx}`}
           d={`M ${sourceX} ${sourceY} C ${sourceX} ${controlY}, ${targetX} ${controlY}, ${targetX} ${targetY}`}
           stroke={link.target.data.position === 'left' ? '#10b981' : '#3b82f6'}
-          strokeWidth="2"
+          strokeWidth="2.5"
           fill="none"
-          opacity="0.6"
-          style={{ transition: 'all 0.3s ease' }}
+          opacity={hoveredNode?.id === link.target.data.id || hoveredNode?.id === link.source.data.id ? "0.9" : "0.5"}
+          style={{
+            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+            filter: hoveredNode?.id === link.target.data.id || hoveredNode?.id === link.source.data.id
+              ? 'drop-shadow(0 0 4px rgba(0, 199, 209, 0.5))'
+              : 'none',
+          }}
+          strokeDasharray={hoveredNode?.id === link.target.data.id || hoveredNode?.id === link.source.data.id ? "0" : "0"}
         />
       );
     });
@@ -1102,7 +1110,8 @@ const GenealogyNew: React.FC = () => {
           transform={`translate(${nodeX}, ${nodeY})`}
           style={{
             cursor: 'pointer',
-            transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            transition: 'all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            transformOrigin: 'center',
           }}
           onClick={() => setSelectedNode(node as any)}
           onDoubleClick={() => {
@@ -1127,12 +1136,15 @@ const GenealogyNew: React.FC = () => {
             rx="16"
             fill={`url(#gradient-${node.id})`}
             stroke={isRoot ? '#00C7D1' : getStatusColor(node.packageStatus)}
-            strokeWidth={isRoot ? '3' : '2'}
-            filter="drop-shadow(0 4px 6px rgba(0,0,0,0.3))"
+            strokeWidth={hoveredNode?.id === node.id ? (isRoot ? '4' : '3') : (isRoot ? '3' : '2')}
+            filter={hoveredNode?.id === node.id
+              ? "drop-shadow(0 8px 16px rgba(0, 199, 209, 0.4))"
+              : "drop-shadow(0 4px 6px rgba(0,0,0,0.3))"
+            }
             style={{
-              transform: hoveredNode?.id === node.id ? 'scale(1.05)' : 'scale(1)',
+              transform: hoveredNode?.id === node.id ? 'scale(1.08)' : 'scale(1)',
               transformOrigin: 'center',
-              transition: 'all 0.3s ease',
+              transition: 'all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
             }}
           />
 
@@ -1834,8 +1846,14 @@ const GenealogyNew: React.FC = () => {
 
             {/* Tree Container */}
             <div
+              ref={containerRef}
               className="relative overflow-auto bg-[#0f172a] rounded-lg border border-[#334155]"
               style={{ height: '600px', cursor: 'grab' }}
+              onMouseMove={(e) => {
+                if (hoveredNode) {
+                  setTooltipPosition({ x: e.clientX, y: e.clientY });
+                }
+              }}
             >
               <svg
                 ref={svgRef}
@@ -1875,21 +1893,35 @@ const GenealogyNew: React.FC = () => {
                 </div>
               </div>
 
-              {/* Hover Tooltip */}
+              {/* Hover Tooltip - Follows cursor */}
               {hoveredNode && (
                 <div
-                  className="absolute top-4 right-4 p-4 bg-[#1e293b]/95 backdrop-blur border-2 border-[#00C7D1] rounded-lg shadow-2xl z-10"
-                  style={{ pointerEvents: 'none' }}
+                  className="fixed p-4 bg-[#1e293b]/98 backdrop-blur-md border-2 border-[#00C7D1] rounded-xl shadow-2xl z-50 max-w-xs"
+                  style={{
+                    left: `${tooltipPosition.x + 20}px`,
+                    top: `${tooltipPosition.y - 20}px`,
+                    pointerEvents: 'none',
+                    transform: 'translateZ(0)',
+                    transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+                    animation: 'tooltipFadeIn 0.2s ease-out',
+                  }}
                 >
-                  <h4 className="text-[#f8fafc] font-bold mb-3 text-lg">{hoveredNode.name}</h4>
+                  <h4 className="text-[#f8fafc] font-bold mb-3 text-lg flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#00C7D1] animate-pulse"></span>
+                    {hoveredNode.name}
+                  </h4>
                   <div className="space-y-2 text-sm">
                     <p className="text-[#94a3b8]"><span className="text-[#64748b]">ID:</span> {hoveredNode.id.substring(0, 8)}...</p>
                     <p className="text-[#94a3b8]"><span className="text-[#64748b]">Email:</span> {hoveredNode.email}</p>
                     <p className="text-[#94a3b8]"><span className="text-[#64748b]">Joined:</span> {new Date(hoveredNode.joinDate).toLocaleDateString()}</p>
                     <div className="border-t border-[#334155] pt-2 mt-2">
                       <p className="text-[#00C7D1] font-semibold">💰 Investment: ${hoveredNode.investment.toLocaleString()}</p>
-                      <p className="text-[#10b981]">◀ Left Volume: ${hoveredNode.leftVolume.toLocaleString()}</p>
-                      <p className="text-[#3b82f6]">▶ Right Volume: ${hoveredNode.rightVolume.toLocaleString()}</p>
+                      <p className="text-[#10b981] flex items-center gap-1">
+                        <span className="text-lg">◀</span> Left: ${hoveredNode.leftVolume.toLocaleString()}
+                      </p>
+                      <p className="text-[#3b82f6] flex items-center gap-1">
+                        <span className="text-lg">▶</span> Right: ${hoveredNode.rightVolume.toLocaleString()}
+                      </p>
                     </div>
                   </div>
                 </div>
