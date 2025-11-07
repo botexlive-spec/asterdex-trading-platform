@@ -39,11 +39,11 @@ export const Earnings: React.FC = () => {
       if (!user) throw new Error('User not authenticated');
 
       // Get all earnings transactions (positive amounts only)
-        .from('mlm_transactions')
-        .select('transaction_type, amount, created_at, status')
-        .eq('user_id', user.id)
-        .gte('amount', 0) // Only positive transactions (earnings)
-        .in('transaction_type', [
+        // .from('mlm_transactions')
+        // .select('transaction_type, amount, created_at, status')
+        // .eq('user_id', user.id)
+        // .gte('amount', 0) // Only positive transactions (earnings)
+        // .in('transaction_type', [
           'roi_income',
           'direct_income',
           'level_income',

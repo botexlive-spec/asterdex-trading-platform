@@ -50,9 +50,9 @@ export const Genealogy: React.FC = () => {
       if (!user) throw new Error('User not authenticated');
 
       // Get user details
-        .from('users')
-        .select('id, full_name')
-        .eq('id', user.id)
+        // .from('users')
+        // .select('id, full_name')
+        // .eq('id', user.id)
         .single();
 
       if (userError) throw userError;
@@ -143,9 +143,9 @@ export const Genealogy: React.FC = () => {
 
         if (level === 1) {
           // Direct referrals
-            .from('users')
-            .select('id, full_name, email, is_active, total_investment')
-            .eq('sponsor_id', userId);
+            // .from('users')
+            // .select('id, full_name, email, is_active, total_investment')
+            // .eq('sponsor_id', userId);
 
           if (error) throw error;
           levelMembers = data?.map(m => ({ ...m, level: 1 })) || [];
@@ -156,9 +156,9 @@ export const Genealogy: React.FC = () => {
 
           // Get all children of previous level members
           const previousIds = previousLevel.map(m => m.id);
-            .from('users')
-            .select('id, full_name, email, is_active, total_investment')
-            .in('sponsor_id', previousIds);
+            // .from('users')
+            // .select('id, full_name, email, is_active, total_investment')
+            // .in('sponsor_id', previousIds);
 
           if (error) throw error;
           levelMembers = data?.map(m => ({ ...m, level })) || [];

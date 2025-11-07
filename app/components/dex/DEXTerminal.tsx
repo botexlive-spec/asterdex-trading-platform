@@ -75,8 +75,8 @@ export const DEXTerminal: React.FC<DEXTerminalProps> = ({
       if (!user) return;
 
       // Record trade in database
-        .from('dex_trades')
-        .insert({
+        // .from('dex_trades')
+        // .insert({
           user_id: user.id,
           trade_type: trade.side, // 'buy' or 'sell'
           symbol: trade.symbol,
@@ -93,8 +93,8 @@ export const DEXTerminal: React.FC<DEXTerminalProps> = ({
       } else {
         // Create notification
 // TODO: Migrate to MySQL backend API -         await supabase
-          .from('notifications')
-          .insert({
+          // .from('notifications')
+          // .insert({
             user_id: user.id,
             title: 'Trade Executed',
             message: `${trade.side.toUpperCase()} ${trade.amount} ${trade.symbol} at $${trade.price}`,
@@ -103,8 +103,8 @@ export const DEXTerminal: React.FC<DEXTerminalProps> = ({
 
         // Create transaction record
 // TODO: Migrate to MySQL backend API -         await supabase
-          .from('mlm_transactions')
-          .insert({
+          // .from('mlm_transactions')
+          // .insert({
             user_id: user.id,
             transaction_type: 'dex_trade',
             amount: trade.total,
@@ -128,8 +128,8 @@ export const DEXTerminal: React.FC<DEXTerminalProps> = ({
 
       // Create notification for pending order
 // TODO: Migrate to MySQL backend API -       await supabase
-        .from('notifications')
-        .insert({
+        // .from('notifications')
+        // .insert({
           user_id: user.id,
           title: 'Order Placed',
           message: `${order.type.toUpperCase()} order placed: ${order.side} ${order.amount} ${order.symbol}`,

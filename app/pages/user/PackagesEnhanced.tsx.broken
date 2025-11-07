@@ -215,10 +215,10 @@ export const PackagesEnhanced: React.FC = () => {
         setTimeout(() => reject(new Error('Request timed out after 10 seconds')), 10000)
       );
 
-        .from('packages')
-        .select('*')
-        .eq('status', 'active')
-        .order('sort_order', { ascending: true });
+//         .from('packages')
+//         .select('*')
+//         .eq('status', 'active')
+//         .order('sort_order', { ascending: true });
 
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 

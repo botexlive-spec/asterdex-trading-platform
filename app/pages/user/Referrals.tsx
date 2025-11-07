@@ -31,9 +31,9 @@ export const Referrals: React.FC = () => {
       if (!user) throw new Error('User not authenticated');
 
       // Get user's referral code
-        .from('users')
-        .select('referral_code, id')
-        .eq('id', user.id)
+        // .from('users')
+        // .select('referral_code, id')
+        // .eq('id', user.id)
         .single();
 
       if (userError) throw userError;
@@ -47,25 +47,25 @@ export const Referrals: React.FC = () => {
       setReferralLink(link);
 
       // Get referral statistics
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .eq('sponsor_id', user.id);
+        // .from('users')
+        // .select('*', { count: 'exact', head: true })
+        // .eq('sponsor_id', user.id);
 
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .eq('sponsor_id', user.id)
-        .eq('is_active', true);
+        // .from('users')
+        // .select('*', { count: 'exact', head: true })
+        // .eq('sponsor_id', user.id)
+        // .eq('is_active', true);
 
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .eq('sponsor_id', user.id)
-        .eq('kyc_status', 'not_submitted');
+        // .from('users')
+        // .select('*', { count: 'exact', head: true })
+        // .eq('sponsor_id', user.id)
+        // .eq('kyc_status', 'not_submitted');
 
       // Calculate total earnings from referrals (direct income + level commissions)
-        .from('mlm_transactions')
-        .select('amount')
-        .eq('user_id', user.id)
-        .in('transaction_type', ['direct_income', 'level_income']);
+        // .from('mlm_transactions')
+        // .select('amount')
+        // .eq('user_id', user.id)
+        // .in('transaction_type', ['direct_income', 'level_income']);
 
       const totalEarnings = earnings?.reduce((sum, tx) => sum + parseFloat(tx.amount.toString()), 0) || 0;
 

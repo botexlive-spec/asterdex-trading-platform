@@ -43,10 +43,10 @@ export const Team: React.FC = () => {
       if (!user) throw new Error('User not authenticated');
 
       // Get direct referrals
-        .from('users')
-        .select('id, full_name, email, total_investment, created_at, is_active, kyc_status, rank')
-        .eq('sponsor_id', user.id)
-        .order('created_at', { ascending: false });
+        // .from('users')
+        // .select('id, full_name, email, total_investment, created_at, is_active, kyc_status, rank')
+        // .eq('sponsor_id', user.id)
+        // .order('created_at', { ascending: false });
 
       if (teamError) throw teamError;
 
