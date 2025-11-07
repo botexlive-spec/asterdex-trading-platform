@@ -339,7 +339,7 @@ router.get('/qualification/:userId/:rankId', async (req: Request, res: Response)
  * GET /api/ranks/achievements - Get all rank achievements
  * GET /api/ranks/achievements/:userId - Get specific user's rank achievements
  */
-router.get('/achievements/:userId?', async (req: Request, res: Response) => {
+router.get('/achievements/:userId', async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
 
