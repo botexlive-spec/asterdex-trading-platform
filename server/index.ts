@@ -22,8 +22,15 @@ import configRoutes from './routes/config';
 import reportsRoutes from './routes/reports';
 import auditRoutes from './routes/audit';
 import impersonateRoutes from './routes/impersonate';
+import planSettingsRoutes from './routes/planSettings';
+import boosterRoutes from './routes/booster';
+import levelUnlocksRoutes from './routes/levelUnlocks';
+import rewardsRoutes from './routes/rewards';
 import { pool, query } from './db';
 import { distributeROI } from './cron/roi-distribution';
+import { distributeEnhancedROI } from './cron/roi-distribution-v2';
+import { expireBoostersDaily } from './services/booster.service';
+import { calculateAllBusinessVolumes, distributeMonthlyRewards } from './services/rewards.service';
 
 dotenv.config();
 
@@ -78,6 +85,10 @@ app.use('/api/config', configRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/impersonate', impersonateRoutes);
+app.use('/api/plan-settings', planSettingsRoutes);
+app.use('/api/booster', boosterRoutes);
+app.use('/api/level-unlocks', levelUnlocksRoutes);
+app.use('/api/rewards', rewardsRoutes);
 
 // Error handler
 app.use((err: Error, req: Request, res: Response, next: any) => {
@@ -100,21 +111,71 @@ app.listen(PORT, () => {
   console.log(`🌍 CORS origin: ${process.env.VITE_APP_URL || 'http://localhost:5173'}`);
   console.log('='.repeat(60) + '\n');
 
-  // Schedule ROI distribution to run daily at midnight (00:00)
+  // ===========================================
+  // Cron Jobs
+  // ===========================================
+
+  // 1. Enhanced ROI Distribution (daily at 00:00 UTC)
+  // Includes base ROI + booster ROI + ROI-on-ROI distribution
   cron.schedule('0 0 * * *', async () => {
-    console.log('⏰ Scheduled ROI distribution starting...');
+    console.log('⏰ [CRON] Enhanced ROI distribution starting...');
     try {
-      await distributeROI();
-      console.log('✅ Scheduled ROI distribution completed');
+      await distributeEnhancedROI();
+      console.log('✅ [CRON] Enhanced ROI distribution completed');
     } catch (error) {
-      console.error('❌ Scheduled ROI distribution failed:', error);
+      console.error('❌ [CRON] Enhanced ROI distribution failed:', error);
     }
   }, {
     timezone: "UTC"
   });
 
-  console.log('⏰ ROI Distribution Cron Job scheduled (daily at 00:00 UTC)');
-  console.log(`   Manual trigger: POST http://localhost:${PORT}/api/admin/distribute-roi\n`);
+  // 2. Expire Boosters (daily at 01:00 UTC)
+  // Auto-expire boosters that have passed 30 days
+  cron.schedule('0 1 * * *', async () => {
+    console.log('⏰ [CRON] Booster expiration check starting...');
+    try {
+      await expireBoostersDaily();
+      console.log('✅ [CRON] Booster expiration check completed');
+    } catch (error) {
+      console.error('❌ [CRON] Booster expiration check failed:', error);
+    }
+  }, {
+    timezone: "UTC"
+  });
+
+  // 3. Calculate Business Volumes (daily at 02:00 UTC)
+  // Calculate 3-leg business volumes for all users
+  cron.schedule('0 2 * * *', async () => {
+    console.log('⏰ [CRON] Business volume calculation starting...');
+    try {
+      await calculateAllBusinessVolumes();
+      console.log('✅ [CRON] Business volume calculation completed');
+    } catch (error) {
+      console.error('❌ [CRON] Business volume calculation failed:', error);
+    }
+  }, {
+    timezone: "UTC"
+  });
+
+  // 4. Distribute Monthly Rewards (1st day of month at 03:00 UTC)
+  // Distribute monthly rewards based on business volume
+  cron.schedule('0 3 1 * *', async () => {
+    console.log('⏰ [CRON] Monthly rewards distribution starting...');
+    try {
+      await distributeMonthlyRewards();
+      console.log('✅ [CRON] Monthly rewards distribution completed');
+    } catch (error) {
+      console.error('❌ [CRON] Monthly rewards distribution failed:', error);
+    }
+  }, {
+    timezone: "UTC"
+  });
+
+  console.log('\n📅 Scheduled Cron Jobs:');
+  console.log('  ├─ Enhanced ROI Distribution: Daily at 00:00 UTC');
+  console.log('  ├─ Booster Expiration: Daily at 01:00 UTC');
+  console.log('  ├─ Business Volume Calculation: Daily at 02:00 UTC');
+  console.log('  └─ Monthly Rewards: 1st of month at 03:00 UTC\n');
 });
 
 // Graceful shutdown
