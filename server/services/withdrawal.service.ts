@@ -350,15 +350,24 @@ export async function getPendingWithdrawals(): Promise<WithdrawalRequest[]> {
 /**
  * Get user withdrawals
  */
-export async function getUserWithdrawals(userId: string): Promise<WithdrawalRequest[]> {
+export async function getUserWithdrawals(
+  userId: string,
+  status?: string,
+  limit: number = 50
+): Promise<WithdrawalRequest[]> {
   try {
-    const result = await query(
-      `SELECT * FROM withdrawals
-       WHERE user_id = ?
-       ORDER BY created_at DESC
-       LIMIT 50`,
-      [userId]
-    );
+    let sql = `SELECT * FROM withdrawals WHERE user_id = ?`;
+    const params: any[] = [userId];
+
+    if (status) {
+      sql += ` AND status = ?`;
+      params.push(status);
+    }
+
+    sql += ` ORDER BY created_at DESC LIMIT ?`;
+    params.push(limit);
+
+    const result = await query(sql, params);
 
     return result.rows.map((row: any) => ({
       id: row.id,
@@ -377,6 +386,42 @@ export async function getUserWithdrawals(userId: string): Promise<WithdrawalRequ
     }));
   } catch (error) {
     console.error('Error getting user withdrawals:', error);
+    return [];
+  }
+}
+
+/**
+ * Get all pending withdrawals (admin only)
+ */
+export async function getAllPendingWithdrawals(limit: number = 100): Promise<WithdrawalRequest[]> {
+  try {
+    const result = await query(
+      `SELECT w.*, u.email, u.full_name
+       FROM withdrawals w
+       JOIN users u ON w.user_id = u.id
+       WHERE w.status = 'pending'
+       ORDER BY w.created_at DESC
+       LIMIT ?`,
+      [limit]
+    );
+
+    return result.rows.map((row: any) => ({
+      id: row.id,
+      user_id: row.user_id,
+      withdrawal_type: row.withdrawal_type,
+      requested_amount: parseFloat(row.requested_amount || row.request_amount),
+      deduction_percentage: parseFloat(row.deduction_percentage),
+      deduction_amount: parseFloat(row.deduction_amount),
+      final_amount: parseFloat(row.final_amount),
+      wallet_address: row.wallet_address,
+      status: row.status,
+      rejection_reason: row.rejection_reason,
+      days_held: row.days_held,
+      investment_date: row.investment_date ? new Date(row.investment_date) : undefined,
+      withdrawal_date: row.withdrawal_date ? new Date(row.withdrawal_date) : undefined
+    }));
+  } catch (error) {
+    console.error('Error getting pending withdrawals:', error);
     return [];
   }
 }

@@ -13,6 +13,30 @@ import {
   getGenerationPlanConfig,
   getBoosterIncomeConfig
 } from '../services/planSettings.service';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// File logging utilities
+const LOG_DIR = path.join(process.cwd(), 'logs');
+const ROI_ON_ROI_LOG_FILE = path.join(LOG_DIR, 'roi-on-roi.log');
+
+function ensureLogDirectory() {
+  if (!fs.existsSync(LOG_DIR)) {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+  }
+}
+
+function logToFile(message: string, logFile: string = ROI_ON_ROI_LOG_FILE) {
+  ensureLogDirectory();
+  const timestamp = new Date().toISOString();
+  const logMessage = `[${timestamp}] ${message}\n`;
+  fs.appendFileSync(logFile, logMessage);
+}
+
+function logROIonROI(message: string) {
+  console.log(message);
+  logToFile(message);
+}
 
 export async function distributeEnhancedROI() {
   console.log('\n🔄 Starting Enhanced ROI Distribution...');
@@ -203,19 +227,24 @@ export async function distributeEnhancedROI() {
  */
 async function distributeROIonROI(userId: string, roiAmount: number): Promise<number> {
   try {
+    logROIonROI(`\n🔄 Starting ROI-on-ROI distribution for user ${userId}, base ROI: $${roiAmount.toFixed(2)}`);
+
     // Check if generation plan is active
     const generationActive = await isPlanActive('generation_plan');
     if (!generationActive) {
+      logROIonROI(`   ⚠️  Generation plan is inactive, skipping ROI-on-ROI`);
       return 0;
     }
 
     // Get generation plan configuration
     const config = await getGenerationPlanConfig();
     if (!config || config.distribution_type !== 'roi_on_roi') {
+      logROIonROI(`   ⚠️  ROI-on-ROI not configured or inactive`);
       return 0;
     }
 
     const levelPercentages = config.level_percentages; // [12, 10, 8, 5, 4, 4, 3, 3, 2, 2, 3, 3, 4, 4, 8]
+    logROIonROI(`   📊 Level percentages: ${levelPercentages.join(', ')}%`);
 
     // Get user's sponsor
     const userResult = await query(
@@ -241,7 +270,7 @@ async function distributeROIonROI(userId: string, roiAmount: number): Promise<nu
 
       if (levelUnlockResult.rows.length === 0) {
         // No level unlocks record, skip this sponsor
-        console.log(`   ⚠️  Sponsor ${currentSponsorId} has no level unlocks, skipping level ${level}`);
+        logROIonROI(`   ⚠️  Sponsor ${currentSponsorId} has no level unlocks, skipping level ${level}`);
 
         // Get next sponsor
         const nextSponsorResult = await query(
@@ -262,7 +291,7 @@ async function distributeROIonROI(userId: string, roiAmount: number): Promise<nu
 
       // Check if this level is unlocked
       if (level > unlockedLevels) {
-        console.log(`   🔒 Level ${level} not unlocked for sponsor ${currentSponsorId}`);
+        logROIonROI(`   🔒 Level ${level} not unlocked for sponsor ${currentSponsorId} (has ${unlockedLevels} unlocked)`);
 
         // Get next sponsor
         const nextSponsorResult = await query(
@@ -284,7 +313,7 @@ async function distributeROIonROI(userId: string, roiAmount: number): Promise<nu
       if (percentage > 0) {
         const commissionAmount = (roiAmount * percentage) / 100;
 
-        // Credit commission to sponsor
+        // Credit commission to sponsor (update wallet in real-time)
         await query(
           `UPDATE users SET
            wallet_balance = wallet_balance + ?,
@@ -294,7 +323,15 @@ async function distributeROIonROI(userId: string, roiAmount: number): Promise<nu
           [commissionAmount, commissionAmount, commissionAmount, currentSponsorId]
         );
 
-        // Record commission
+        // Record in payouts table (primary payout record)
+        await query(
+          `INSERT INTO payouts
+           (user_id, from_user_id, payout_type, amount, level, description, status)
+           VALUES (?, ?, 'roi_on_roi', ?, ?, ?, 'completed')`,
+          [currentSponsorId, userId, commissionAmount, level, `Level ${level} ROI-on-ROI commission from user ${userId}`]
+        );
+
+        // Record commission (for reporting)
         await query(
           `INSERT INTO commissions
            (user_id, from_user_id, commission_type, amount, level, created_at)
@@ -302,7 +339,7 @@ async function distributeROIonROI(userId: string, roiAmount: number): Promise<nu
           [currentSponsorId, userId, commissionAmount, level]
         );
 
-        // Record transaction
+        // Record transaction (for audit trail)
         await query(
           `INSERT INTO mlm_transactions
            (user_id, transaction_type, amount, description, status, created_at, updated_at)
@@ -311,7 +348,7 @@ async function distributeROIonROI(userId: string, roiAmount: number): Promise<nu
         );
 
         totalROIonROI += commissionAmount;
-        console.log(`   📈 Level ${level} ROI-on-ROI: $${commissionAmount.toFixed(2)} to sponsor ${currentSponsorId}`);
+        logROIonROI(`   📈 Level ${level} ROI-on-ROI: $${commissionAmount.toFixed(2)} (${percentage}%) to sponsor ${currentSponsorId} from user ${userId}`);
       }
 
       // Get next sponsor
@@ -328,10 +365,14 @@ async function distributeROIonROI(userId: string, roiAmount: number): Promise<nu
       level++;
     }
 
+    logROIonROI(`✅ ROI-on-ROI distribution completed for user ${userId}: Total distributed $${totalROIonROI.toFixed(2)} across ${level - 1} levels\n`);
+
     return totalROIonROI;
 
   } catch (error) {
-    console.error('❌ ROI-on-ROI distribution error:', error);
+    const errorMsg = `❌ ROI-on-ROI distribution error for user ${userId}: ${error}`;
+    console.error(errorMsg);
+    logToFile(errorMsg);
     return 0;
   }
 }
