@@ -112,7 +112,7 @@ app.listen(PORT, () => {
   console.log(`📍 Server running on: http://localhost:${PORT}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🔐 Auth endpoint: http://localhost:${PORT}/api/auth/login`);
-  console.log(`💾 Database: ${process.env.POSTGRES_DB}`);
+  console.log(`💾 Database: ${process.env.MYSQL_DATABASE}`);
   console.log(`🌍 CORS origin: ${process.env.VITE_APP_URL || 'http://localhost:5173'}`);
   console.log('='.repeat(60) + '\n');
 
