@@ -80,9 +80,9 @@ Finaster is a production-ready MLM (Multi-Level Marketing) platform featuring:
 
 ### Prerequisites
 
-- Node.js 18+
-- Supabase account
-- PostgreSQL knowledge (basic)
+- Node.js 20+
+- MySQL 8.0+ (Local or remote)
+- npm or pnpm
 
 ### Installation
 
@@ -92,33 +92,76 @@ npm install
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your Supabase credentials
+# Edit .env with your MySQL credentials:
+#   MYSQL_HOST=localhost
+#   MYSQL_USER=root
+#   MYSQL_PASSWORD=your_password
+#   MYSQL_DATABASE=finaster_mlm
+```
 
-# Start development server
+### Start Development Servers
+
+#### Option 1: Start Both Servers Together (Recommended)
+```bash
+npm run dev:all
+```
+
+#### Option 2: Start Separately
+```bash
+# Terminal 1 - Backend API
+npm run dev:server
+
+# Terminal 2 - Frontend
 npm run dev
 ```
 
-Application runs at `http://localhost:5174`
+### Access Points
+
+- **Frontend:** http://localhost:5173
+- **Backend API:** http://localhost:3001
+- **Health Check:** http://localhost:3001/api/health
+
+### Default Login Credentials
+
+- **Admin:** admin@finaster.com / admin123
+- **User:** user@finaster.com / admin123
 
 ### Database Setup
 
-1. Open Supabase Dashboard → SQL Editor
-2. Execute these files in order:
-   ```
-   database/create-business-rules-tables.sql
-   database/create-mlm-functions.sql
-   database/enable-rls-policies.sql
-   ```
+MySQL database and tables are automatically created on first run. If you need to set up manually:
 
-**Complete guide:** See [FINAL_DEPLOYMENT_SUMMARY.md](./FINAL_DEPLOYMENT_SUMMARY.md)
+1. Create database: `CREATE DATABASE finaster_mlm;`
+2. Run migrations (if provided)
+3. Seed initial data with admin user
+
+**Complete guide:** See [RUNTIME_FIX_COMPLETE.md](./RUNTIME_FIX_COMPLETE.md)
+
+### ⚠️ Port Conflict Resolution
+
+If you get "Port 5173 is already in use" error:
+
+**Windows:**
+```bash
+netstat -ano | findstr :5173
+taskkill //F //PID <process_id>
+```
+
+**Linux/Mac:**
+```bash
+lsof -ti:5173 | xargs kill -9
+```
+
+**Alternative:** Vite will automatically try ports 5174, 5175, etc. if 5173 is busy.
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Frontend:** React 18.3, TypeScript 5.0, Vite 7.1, Tailwind CSS
-- **Backend:** Supabase (PostgreSQL, Auth, Real-time)
-- **Infrastructure:** Node.js, PM2
+- **Frontend:** React 18.3, TypeScript 5.8, Vite 7.1, Tailwind CSS
+- **Backend:** Express.js 5.1, Node.js 22.12
+- **Database:** MySQL 8.4 with connection pooling
+- **Authentication:** JWT (jsonwebtoken 9.0) with bcrypt hashing
+- **Infrastructure:** Node.js, tsx, PM2 (optional)
 
 ---
 
@@ -163,30 +206,45 @@ asterdex-8621-main/
 ### Development
 
 ```bash
-npm run dev    # Start dev server on port 5174
+# Start both servers
+npm run dev:all
+
+# Or separately:
+npm run dev:server  # Backend on port 3001
+npm run dev        # Frontend on port 5173
 ```
 
 ### Production
 
 ```bash
+# Build frontend
 npm run build
-npm run preview  # Test production build
-```
 
-### Database & Cron Jobs
+# Test production build
+npm run preview
 
-```bash
-# Deploy database (in Supabase SQL Editor)
-# 1. create-business-rules-tables.sql
-# 2. create-mlm-functions.sql
-# 3. enable-rls-policies.sql
+# Run backend in production
+NODE_ENV=production npm run server
 
-# Set up ROI cron (PM2 recommended)
-pm2 start scripts/distribute-daily-roi.js --cron "0 2 * * *"
+# Or with PM2 for process management
+pm2 start npm --name "asterdex-api" -- run server
+pm2 start npm --name "asterdex-frontend" -- run preview
 pm2 save && pm2 startup
 ```
 
-**Time to Production:** ~1 hour
+### Cron Jobs (Automated Tasks)
+
+The backend automatically schedules these cron jobs on startup:
+
+- **ROI Distribution:** Daily at 00:00 UTC
+- **Booster Expiration:** Daily at 01:00 UTC
+- **Business Volume Calculation:** Daily at 02:00 UTC
+- **Binary Matching:** Daily at 02:30 UTC
+- **Monthly Rewards:** 1st of month at 03:00 UTC
+
+No additional configuration needed for cron jobs.
+
+**Time to Production:** ~30 minutes
 
 ---
 
