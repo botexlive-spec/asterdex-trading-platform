@@ -172,6 +172,36 @@ router.post('/purchase', authenticateToken, async (req: Request, res: Response) 
       // Don't fail the entire purchase if binary update fails
     }
 
+    // Initialize or update booster
+    try {
+      const { initializeBooster, updateBoosterDirectCount } = await import('../services/booster.service');
+
+      // Check if this is user's first investment (initialize booster)
+      const firstPackageCheck = await query(
+        'SELECT COUNT(*) as count FROM user_packages WHERE user_id = ?',
+        [userId]
+      );
+
+      if (parseInt(firstPackageCheck.rows[0].count) === 1) {
+        // This is first investment, initialize booster
+        await initializeBooster(userId);
+        console.log(`🚀 Booster initialized for user ${userId}`);
+      }
+
+      // Get user's sponsor and update their booster count if they have active booster
+      const userSponsor = await query(
+        'SELECT sponsor_id FROM users WHERE id = ? LIMIT 1',
+        [userId]
+      );
+
+      if (userSponsor.rows.length > 0 && userSponsor.rows[0].sponsor_id) {
+        await updateBoosterDirectCount(userSponsor.rows[0].sponsor_id);
+      }
+    } catch (error) {
+      console.error(`⚠️  Booster processing failed:`, error);
+      // Don't fail the entire purchase if booster fails
+    }
+
     console.log(`✅ Package purchased: User ${userId}, Package ${package_id}, Amount $${amount}`);
 
     res.json({

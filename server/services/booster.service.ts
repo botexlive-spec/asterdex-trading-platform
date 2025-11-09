@@ -81,13 +81,21 @@ export async function initializeBooster(userId: string): Promise<void> {
 }
 
 /**
- * Update booster direct count when new referral is added
+ * Update booster direct count when new referral is added or makes investment
+ * Counts only directs WITH active investments (user_packages)
  */
 export async function updateBoosterDirectCount(sponsorId: string): Promise<void> {
   try {
     // Get active booster
     const boosterResult = await query(
-      `SELECT b.*, (SELECT COUNT(*) FROM users WHERE sponsor_id = ? AND is_active = TRUE) as current_directs
+      `SELECT b.*,
+       (SELECT COUNT(DISTINCT u.id)
+        FROM users u
+        INNER JOIN user_packages up ON u.id = up.user_id
+        WHERE u.sponsor_id = ?
+        AND u.is_active = TRUE
+        AND up.status = 'active'
+       ) as current_directs
        FROM boosters b
        WHERE b.user_id = ? AND b.status = 'active'
        LIMIT 1`,
@@ -100,6 +108,8 @@ export async function updateBoosterDirectCount(sponsorId: string): Promise<void>
 
     const booster = boosterResult.rows[0];
     const currentDirects = parseInt(booster.current_directs);
+
+    console.log(`📊 Booster check for ${sponsorId}: ${currentDirects}/${booster.target_directs} directs with active investments`);
 
     // Update booster direct count
     await query(
@@ -134,12 +144,19 @@ export async function updateBoosterDirectCount(sponsorId: string): Promise<void>
 
 /**
  * Get booster status for user
+ * Counts only directs WITH active investments
  */
 export async function getBoosterStatus(userId: string): Promise<Booster | null> {
   try {
     const result = await query(
       `SELECT b.*,
-       (SELECT COUNT(*) FROM users WHERE sponsor_id = ? AND is_active = TRUE) as current_directs,
+       (SELECT COUNT(DISTINCT u.id)
+        FROM users u
+        INNER JOIN user_packages up ON u.id = up.user_id
+        WHERE u.sponsor_id = ?
+        AND u.is_active = TRUE
+        AND up.status = 'active'
+       ) as current_directs,
        DATEDIFF(b.end_date, NOW()) as days_remaining
        FROM boosters b
        WHERE b.user_id = ? AND b.status IN ('active', 'achieved')
