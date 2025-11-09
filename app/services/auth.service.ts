@@ -1,6 +1,7 @@
 /**
  * Authentication Service - API Client
  * Calls Express API instead of Supabase
+ * Uses httpClient for automatic token refresh on 401 responses
  */
 
 import {
@@ -8,6 +9,7 @@ import {
   LoginCredentials,
   AuthResponse,
 } from '../types/auth.types';
+import { get, post } from '../utils/httpClient';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -47,33 +49,21 @@ export const signIn = async (credentials: LoginCredentials): Promise<AuthRespons
 
 /**
  * Get the current authenticated user
+ * Uses httpClient for automatic token refresh on 401
  */
 export const getCurrentUser = async (): Promise<User | null> => {
   try {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
 
     if (!token) {
       return null;
     }
 
-    const response = await fetch(`${API_URL}/api/auth/me`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user');
-      return null;
-    }
-
-    const data = await response.json();
+    const data = await get<{ user: User }>('/api/auth/me');
     return data.user;
   } catch (error: any) {
     console.error('Get current user error:', error);
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
+    // httpClient handles token cleanup on auth failure
     return null;
   }
 };
@@ -88,29 +78,35 @@ export const signUp = async (credentials: any): Promise<AuthResponse> => {
 
 /**
  * Sign out the current user
+ * Revokes refresh token on backend
  */
 export const signOut = async (): Promise<void> => {
   try {
-    const token = localStorage.getItem('auth_token');
+    const refreshToken = localStorage.getItem('refresh_token') || sessionStorage.getItem('refresh_token');
 
-    if (token) {
-      await fetch(`${API_URL}/api/auth/logout`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+    if (refreshToken) {
+      // Send refresh token to revoke it on backend
+      await post('/api/auth/logout', { refreshToken });
     }
 
+    // Clear all auth data from storage
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
+    sessionStorage.removeItem('auth_token');
+    sessionStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('user');
 
     console.log('🚪 User signed out');
   } catch (error: any) {
     console.error('Sign out error:', error);
-    // Clear local storage anyway
+    // Clear both storages anyway
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
+    sessionStorage.removeItem('auth_token');
+    sessionStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('user');
   }
 };
 

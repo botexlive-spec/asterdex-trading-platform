@@ -1,51 +1,20 @@
 /**
  * MLM API Client - MySQL Backend
  * Replaces Supabase calls with MySQL backend API endpoints
+ * Uses httpClient for automatic token refresh on 401 responses
  */
+
+import { get, post } from '../utils/httpClient';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 // Re-export types from wallet.service for compatibility
 export type { WalletBalance, Transaction, DepositAddress } from './wallet.service';
 
 /**
- * Get auth token from localStorage
- */
-function getAuthToken(): string | null {
-  return localStorage.getItem('auth_token');
-}
-
-/**
- * Make authenticated API request
- */
-async function apiRequest(endpoint: string, options: RequestInit = {}) {
-  const token = getAuthToken();
-
-  if (!token) {
-    throw new Error('No authentication token found');
-  }
-
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      ...options.headers,
-    },
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(error.error || `API request failed: ${response.status}`);
-  }
-
-  return response.json();
-}
-
-/**
  * Get user dashboard data
  */
 export async function getUserDashboard() {
-  return apiRequest('/api/dashboard');
+  return get('/api/dashboard');
 }
 
 /**
@@ -61,21 +30,21 @@ export async function getTransactionHistory(limit: number = 50, offset: number =
     params.append('type', type);
   }
 
-  return apiRequest(`/api/transactions?${params.toString()}`);
+  return get(`/api/transactions?${params.toString()}`);
 }
 
 /**
  * Get packages (stub - implement when needed)
  */
 export async function getPackages() {
-  return apiRequest('/api/packages');
+  return get('/api/packages');
 }
 
 /**
  * Get user packages (stub - implement when needed)
  */
 export async function getUserPackages() {
-  return apiRequest('/api/packages/user');
+  return get('/api/packages/user');
 }
 
 // ============================================
@@ -86,17 +55,14 @@ export async function getUserPackages() {
  * Get wallet balance
  */
 export async function getWalletBalance() {
-  return apiRequest('/api/wallet/balance');
+  return get('/api/wallet/balance');
 }
 
 /**
  * Generate deposit address
  */
 export async function generateDepositAddress(crypto: string, network: string) {
-  return apiRequest('/api/wallet/deposit/address', {
-    method: 'POST',
-    body: JSON.stringify({ crypto, network }),
-  });
+  return post('/api/wallet/deposit/address', { crypto, network });
 }
 
 /**
@@ -111,17 +77,14 @@ export async function submitDeposit(request: {
   referenceNumber?: string;
   utrNumber?: string;
 }) {
-  return apiRequest('/api/wallet/deposit', {
-    method: 'POST',
-    body: JSON.stringify(request),
-  });
+  return post('/api/wallet/deposit', request);
 }
 
 /**
  * Get withdrawal limits
  */
 export async function getWithdrawalLimits() {
-  return apiRequest('/api/wallet/withdrawal/limits');
+  return get('/api/wallet/withdrawal/limits');
 }
 
 /**
@@ -134,10 +97,7 @@ export async function submitWithdrawal(request: {
   password: string;
   verificationCode?: string;
 }) {
-  return apiRequest('/api/wallet/withdrawal', {
-    method: 'POST',
-    body: JSON.stringify(request),
-  });
+  return post('/api/wallet/withdrawal', request);
 }
 
 /**
@@ -149,15 +109,81 @@ export async function transferFunds(request: {
   note?: string;
   password: string;
 }) {
-  return apiRequest('/api/wallet/transfer', {
-    method: 'POST',
-    body: JSON.stringify(request),
-  });
+  return post('/api/wallet/transfer', request);
 }
 
 /**
  * Get pending transactions (deposits/withdrawals)
  */
 export async function getPendingTransactions() {
-  return apiRequest('/api/wallet/transactions/pending');
+  return get('/api/wallet/transactions/pending');
+}
+
+// ============================================
+// ROBOT SUBSCRIPTION MANAGEMENT
+// ============================================
+
+export interface RobotSubscription {
+  id: string;
+  user_id: string;
+  subscription_type: string;
+  amount: number;
+  is_active: boolean;
+  started_at: string;
+  expires_at: string;
+  created_at: string;
+}
+
+/**
+ * Get user's robot subscription
+ * TODO: Implement backend API endpoint
+ */
+export async function getUserRobotSubscription(userId?: string): Promise<RobotSubscription | null> {
+  try {
+    // Stub implementation - returns null until backend endpoint is created
+    console.warn('getUserRobotSubscription: Backend endpoint not implemented yet');
+    return null;
+  } catch (error) {
+    console.error('Error fetching robot subscription:', error);
+    return null;
+  }
+}
+
+/**
+ * Check if user has active robot subscription
+ * TODO: Implement backend API endpoint
+ */
+export async function hasActiveRobotSubscription(userId?: string): Promise<boolean> {
+  try {
+    const subscription = await getUserRobotSubscription(userId);
+    return !!subscription;
+  } catch (error) {
+    console.error('Error checking robot subscription:', error);
+    return false;
+  }
+}
+
+/**
+ * Purchase robot subscription
+ * TODO: Implement backend API endpoint
+ */
+export async function purchaseRobotSubscription(): Promise<RobotSubscription> {
+  try {
+    // Stub implementation - throw error until backend endpoint is created
+    throw new Error('Robot subscription purchase not implemented yet. Please contact support.');
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to purchase robot subscription');
+  }
+}
+
+// ============================================
+// CONFIG CACHE MANAGEMENT
+// ============================================
+
+/**
+ * Clear configuration cache
+ * This is a no-op in the MySQL implementation since caching is handled server-side
+ */
+export function clearConfigCache(): void {
+  console.log('clearConfigCache: No-op in MySQL implementation (server-side caching)');
 }

@@ -47,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
       const userStr = localStorage.getItem('user') || sessionStorage.getItem('user');
-      const refreshToken = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token'); // Use same token for refresh
+      const refreshToken = localStorage.getItem('refresh_token') || sessionStorage.getItem('refresh_token');
 
       if (token && userStr) {
         console.log('✅ Found stored auth token, verifying...');
@@ -72,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAuthState({
           user,
           token,
-          refreshToken,
+          refreshToken: refreshToken || null,
           isAuthenticated: true,
           isLoading: false,
           error: null,
@@ -85,6 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('❌ Auth check error:', error);
       // Clear potentially corrupt data
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
       setAuthState(prev => ({ ...prev, isLoading: false }));
     } finally {
@@ -113,13 +114,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('✅ API login successful:', response.user.email, 'Role:', response.user.role);
 
-      // Save to localStorage (consistent key: 'auth_token')
-      localStorage.setItem('auth_token', response.token);
+      // Save tokens and user to localStorage
+      // Note: accessToken is short-lived (15min), refreshToken is long-lived (7days)
+      localStorage.setItem('auth_token', response.accessToken || response.token);
+      localStorage.setItem('refresh_token', response.refreshToken || response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
 
       setAuthState({
         user: response.user,
-        token: response.token,
+        token: response.accessToken || response.token,
         refreshToken: response.refreshToken || response.token,
         isAuthenticated: true,
         isLoading: false,
@@ -238,5 +241,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-export default AuthContext;
