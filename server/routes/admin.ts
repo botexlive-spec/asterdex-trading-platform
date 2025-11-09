@@ -75,8 +75,9 @@ router.get('/users', authenticateAdmin, async (req: Request, res: Response) => {
     // Get paginated users
     const usersResult = await query(
       `SELECT id, email, full_name, role, sponsor_id, referral_code, wallet_balance,
-       total_investment, total_earnings, roi_earnings, commission_earnings, binary_earnings,
-       current_rank, kyc_status, email_verified, is_active, created_at, updated_at
+       total_investment, total_earnings, roi_on_roi_earnings, booster_earnings, reward_earnings,
+       current_rank, kyc_status, email_verified, is_active, created_at, updated_at,
+       phone_number, country, left_volume, right_volume, direct_referrals_count
        FROM users ${whereClause}
        ORDER BY created_at DESC
        LIMIT ${limit} OFFSET ${offset}`,
