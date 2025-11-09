@@ -744,7 +744,7 @@ router.get('/analytics/overview', authenticateAdmin, async (req: Request, res: R
     let withdrawalsResult = { rows: [{ pending: 0, pending_amount: 0 }] };
     try {
       withdrawalsResult = await query(
-        'SELECT COUNT(*) as pending, COALESCE(SUM(CASE WHEN status = "pending" THEN amount ELSE 0 END), 0) as pending_amount FROM withdrawals'
+        'SELECT COUNT(*) as pending, COALESCE(SUM(CASE WHEN status = "pending" THEN requested_amount ELSE 0 END), 0) as pending_amount FROM withdrawals'
       );
     } catch (error) {
       // Withdrawals table doesn't exist yet, use defaults
@@ -754,7 +754,7 @@ router.get('/analytics/overview', authenticateAdmin, async (req: Request, res: R
     let kycResult = { rows: [{ pending: 0, approved: 0 }] };
     try {
       kycResult = await query(
-        'SELECT SUM(CASE WHEN status = "pending" THEN 1 ELSE 0 END) as pending, SUM(CASE WHEN status = "approved" THEN 1 ELSE 0 END) as approved FROM kyc_submissions'
+        'SELECT SUM(CASE WHEN status = "PENDING" THEN 1 ELSE 0 END) as pending, SUM(CASE WHEN status = "APPROVED" THEN 1 ELSE 0 END) as approved FROM kyc'
       );
     } catch (error) {
       // KYC table doesn't exist yet, use defaults
