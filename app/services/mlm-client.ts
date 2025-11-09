@@ -1,6 +1,5 @@
 /**
  * MLM API Client - MySQL Backend
- * Replaces Supabase calls with MySQL backend API endpoints
  * Uses httpClient for automatic token refresh on 401 responses
  */
 

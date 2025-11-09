@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import toast, { Toaster } from 'react-hot-toast';
 import { Button, Card, Badge, StatCard } from '../../components/ui/DesignSystem';
-import { getUserDashboard } from '../../services/mlm.service';
+import { getUserDashboard } from '../../services/mlm-client';
 import { getTeamMembers } from '../../services/team.service';
 import { useAuth } from '../../context/AuthContext';
 
@@ -148,7 +148,7 @@ export const DashboardNew: React.FC = () => {
         console.log('📊 [Dashboard] Loading dashboard data for user:', user.id);
         console.log('🔧 [Dashboard] Using unified MySQL team.service for team stats');
         const [dashboardData, teamData] = await Promise.all([
-          getUserDashboard(user.id),  // User data from Supabase (wallet, earnings, etc.)
+          getUserDashboard(user.id),  // User data from MySQL API (wallet, earnings, etc.)
           getTeamMembers()  // ✅ Team data from MySQL API (JWT-based)
         ]);
         console.log('📊 [Dashboard] Received data for user:', dashboardData.user.id, dashboardData.user.email);

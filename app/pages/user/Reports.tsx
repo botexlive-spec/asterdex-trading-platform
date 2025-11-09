@@ -4,7 +4,8 @@ import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import { format } from 'date-fns';
 import toast, { Toaster } from 'react-hot-toast';
 import { Button, Card } from '../../components/ui/DesignSystem';
-import { getUserDashboard, getTransactionHistory, getTeamMembers } from '../../services/mlm.service';
+import { getUserDashboard, getTransactionHistory } from '../../services/mlm-client';
+import { getTeamMembers } from '../../services/team.service';
 import { useAuth } from "../../context/AuthContext";
 
 // Report types

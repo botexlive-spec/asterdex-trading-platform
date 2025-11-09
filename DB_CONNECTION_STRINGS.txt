@@ -1,0 +1,311 @@
+================================================================================
+ASTERDEX MLM - DATABASE CONNECTION STRINGS
+================================================================================
+
+Quick Copy-Paste Connection Strings for Various Tools
+
+================================================================================
+1. MYSQL COMMAND LINE
+================================================================================
+
+Windows Command:
+----------------
+"C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe" -u root -proot finaster_mlm
+
+OR use the quick access batch file:
+quick-db-access.bat
+
+
+================================================================================
+2. MYSQL WORKBENCH
+================================================================================
+
+Connection Name:    Asterdex MLM
+Connection Method:  Standard (TCP/IP)
+Hostname:          localhost
+Port:              3306
+Username:          root
+Password:          root
+Default Schema:    finaster_mlm
+
+
+================================================================================
+3. HEIDISQL
+================================================================================
+
+Network type:      MySQL (TCP/IP)
+Library:           libmysql.dll
+Hostname / IP:     localhost
+User:              root
+Password:          root
+Port:              3306
+Database:          finaster_mlm
+
+
+================================================================================
+4. DBeaver
+================================================================================
+
+Host:              localhost
+Port:              3306
+Database:          finaster_mlm
+Username:          root
+Password:          root
+Driver:            MySQL 8+
+
+
+================================================================================
+5. DATAGRIP (JetBrains)
+================================================================================
+
+Host:              localhost
+Port:              3306
+Database:          finaster_mlm
+User:              root
+Password:          root
+URL:               jdbc:mysql://localhost:3306/finaster_mlm
+
+
+================================================================================
+6. VS CODE - MYSQL EXTENSION
+================================================================================
+
+Extension:         MySQL (by cweijan)
+
+Connection Config:
+{
+  "host": "localhost",
+  "port": 3306,
+  "user": "root",
+  "password": "root",
+  "database": "finaster_mlm"
+}
+
+
+================================================================================
+7. NODE.JS CONNECTION
+================================================================================
+
+Using mysql2:
+const mysql = require('mysql2/promise');
+
+const pool = mysql.createPool({
+  host: 'localhost',
+  port: 3306,
+  user: 'root',
+  password: 'root',
+  database: 'finaster_mlm',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
+
+
+================================================================================
+8. PHP CONNECTION (PDO)
+================================================================================
+
+<?php
+$host = 'localhost';
+$db   = 'finaster_mlm';
+$user = 'root';
+$pass = 'root';
+$charset = 'utf8mb4';
+
+$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+$options = [
+    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_EMULATE_PREPARES   => false,
+];
+
+try {
+    $pdo = new PDO($dsn, $user, $pass, $options);
+} catch (\PDOException $e) {
+    throw new \PDOException($e->getMessage(), (int)$e->getCode());
+}
+?>
+
+
+================================================================================
+9. PYTHON CONNECTION
+================================================================================
+
+Using PyMySQL:
+import pymysql.cursors
+
+connection = pymysql.connect(
+    host='localhost',
+    port=3306,
+    user='root',
+    password='root',
+    database='finaster_mlm',
+    charset='utf8mb4',
+    cursorclass=pymysql.cursors.DictCursor
+)
+
+
+================================================================================
+10. JDBC CONNECTION STRING
+================================================================================
+
+jdbc:mysql://localhost:3306/finaster_mlm?user=root&password=root&useSSL=false&serverTimezone=UTC
+
+
+================================================================================
+11. ODBC CONNECTION STRING
+================================================================================
+
+Driver={MySQL ODBC 8.0 Unicode Driver};
+Server=localhost;
+Port=3306;
+Database=finaster_mlm;
+User=root;
+Password=root;
+Option=3;
+
+
+================================================================================
+12. C# / .NET CONNECTION STRING
+================================================================================
+
+Using MySql.Data:
+server=localhost;
+port=3306;
+database=finaster_mlm;
+uid=root;
+pwd=root;
+CharSet=utf8;
+
+
+================================================================================
+13. SEQUEL PRO / SEQUEL ACE (Mac)
+================================================================================
+
+Name:         Asterdex MLM
+Host:         localhost
+Username:     root
+Password:     root
+Database:     finaster_mlm
+Port:         3306
+
+
+================================================================================
+14. NAVICAT
+================================================================================
+
+Connection Name:   Asterdex MLM
+Host:             localhost
+Port:             3306
+User Name:        root
+Password:         root
+Database:         finaster_mlm
+
+
+================================================================================
+15. ADMINER (Web-based)
+================================================================================
+
+System:       MySQL
+Server:       localhost:3306
+Username:     root
+Password:     root
+Database:     finaster_mlm
+
+
+================================================================================
+16. TABLEPLUS
+================================================================================
+
+Connection Type:   MySQL
+Name:             Asterdex MLM
+Host:             localhost
+Port:             3306
+User:             root
+Password:         root
+Database:         finaster_mlm
+
+
+================================================================================
+ENVIRONMENT VARIABLES
+================================================================================
+
+For .env files:
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DATABASE=finaster_mlm
+MYSQL_USER=root
+MYSQL_PASSWORD=root
+
+DATABASE_URL=mysql://root:root@localhost:3306/finaster_mlm
+
+
+================================================================================
+QUICK ACCESS COMMANDS
+================================================================================
+
+List all databases:
+"C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe" -u root -proot -e "SHOW DATABASES;"
+
+List all tables:
+"C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe" -u root -proot finaster_mlm -e "SHOW TABLES;"
+
+Export database:
+"C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqldump.exe" -u root -proot finaster_mlm > backup.sql
+
+Import database:
+"C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe" -u root -proot finaster_mlm < backup.sql
+
+
+================================================================================
+SECURITY NOTE
+================================================================================
+
+⚠️  WARNING: The password 'root' is NOT secure for production use!
+
+For production, create a new user with strong password:
+
+CREATE USER 'mlm_user'@'localhost' IDENTIFIED BY 'STRONG_PASSWORD_HERE';
+GRANT ALL PRIVILEGES ON finaster_mlm.* TO 'mlm_user'@'localhost';
+FLUSH PRIVILEGES;
+
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Can't connect? Check if MySQL is running:
+net start MySQL84
+
+Forgot password? Reset it:
+ALTER USER 'root'@'localhost' IDENTIFIED BY 'new_password';
+FLUSH PRIVILEGES;
+
+Port already in use? Find what's using it:
+netstat -ano | findstr :3306
+
+Wrong database? Switch to correct one:
+USE finaster_mlm;
+
+
+================================================================================
+FILES CREATED FOR YOU
+================================================================================
+
+1. quick-db-access.bat          - Double-click for instant MySQL access
+2. db-quick-queries.sql         - Pre-written useful queries
+3. db-viewer.html               - Web-based database viewer
+4. DATABASE_ACCESS_GUIDE.md     - Complete access guide
+5. DB_CONNECTION_STRINGS.txt    - This file (all connection strings)
+
+
+================================================================================
+CONTACT
+================================================================================
+
+Database: finaster_mlm
+Project:  Asterdex MLM Platform
+Version:  MySQL 8.4
+Location: localhost:3306
+
+Generated: 2025-11-08

@@ -1,7 +1,6 @@
 /**
  * Genealogy Service - MySQL Backend API
  * Handles binary tree genealogy with MySQL backend
- * NO SUPABASE - Pure MySQL API
  */
 
 const API_BASE_URL = 'http://localhost:3001/api';

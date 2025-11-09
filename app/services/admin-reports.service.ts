@@ -8,12 +8,10 @@ import { format, subDays, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 /**
  * ⚠️  MIGRATION IN PROGRESS: MySQL Backend Integration
  * 
- * This service is being migrated from Supabase to MySQL backend.
  * Some functions may return empty data or throw errors until backend
  * API endpoints are fully implemented.
  * 
  * Service: Admin reports generation
- * Supabase references removed: 17
  * 
  * Next steps:
  * 1. Create backend API routes in server/routes/admin-reports.ts
@@ -24,10 +22,10 @@ import { format, subDays, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 /**
- * Get auth token from localStorage
+ * Get auth token from localStorage or sessionStorage
  */
 function getAuthToken(): string | null {
-  return localStorage.getItem('auth_token');
+  return localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
 }
 
 /**

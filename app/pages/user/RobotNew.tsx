@@ -8,7 +8,7 @@ import { format, addMonths, differenceInDays } from 'date-fns';
 import { Button, Card, Badge } from '../../components/ui/DesignSystem';
 import { Modal } from '../../components/ui/Modal';
 import { useAuth } from '../../context/AuthContext';
-import { getUserRobotSubscription, purchaseRobotSubscription } from '../../services/mlm.service';
+import { getUserRobotSubscription, purchaseRobotSubscription } from '../../services/mlm-client';
 
 // Subscription status type
 type SubscriptionStatus = 'active' | 'inactive' | 'expired';

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import * as ConfigService from '../../services/admin-config.service';
-import { clearConfigCache } from '../../services/mlm.service';
+import { clearConfigCache } from '../../services/mlm-client';
 
 export const SystemConfiguration: React.FC = () => {
   const navigate = useNavigate();

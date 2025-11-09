@@ -1,7 +1,6 @@
 /**
  * Package Service
  * Handles all package-related operations using MySQL backend API
- * Migrated from Supabase to Express/MySQL backend
  */
 
 import apiClient from '../utils/api-client';

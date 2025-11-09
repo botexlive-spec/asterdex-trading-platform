@@ -3,7 +3,7 @@ import { Card, Button, Badge } from '../../components/ui/DesignSystem';
 import { Helmet } from 'react-helmet-async';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
-import { getTransactionHistory } from '../../services/mlm.service';
+import { getTransactionHistory } from '../../services/mlm-client';
 
 interface Transaction {
   id: string;

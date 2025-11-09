@@ -96,9 +96,6 @@ ecosystem.config.json
 # Deployment
 /public/manifest.json
 
-# Supabase
-.supabase/
-
 # Other
 .vercel
 .netlify

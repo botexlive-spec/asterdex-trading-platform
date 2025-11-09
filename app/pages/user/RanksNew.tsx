@@ -3,7 +3,7 @@ import { Card, Button, Badge } from '../../components/ui/DesignSystem';
 import { Helmet } from 'react-helmet-async';
 import toast from 'react-hot-toast';
 import { getAllRankRewards, getUserRankAchievements, calculateRankEligibility } from '../../services/admin-rank.service';
-import { getUserDashboard } from '../../services/mlm.service';
+import { getUserDashboard } from '../../services/mlm-client';
 import { useAuth } from "../../context/AuthContext";
 
 interface RankRequirement {

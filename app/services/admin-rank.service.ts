@@ -34,10 +34,10 @@ export interface RankDistribution {
 }
 
 /**
- * Get auth token from localStorage
+ * Get auth token from localStorage or sessionStorage
  */
 function getAuthToken(): string | null {
-  return localStorage.getItem('auth_token');
+  return localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
 }
 
 /**

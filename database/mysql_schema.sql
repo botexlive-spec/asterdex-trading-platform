@@ -106,7 +106,7 @@ CREATE TABLE mlm_transactions (
   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
   user_id CHAR(36) NOT NULL,
 
-  transaction_type ENUM('deposit', 'withdrawal', 'level_income', 'matching_bonus', 'roi_distribution', 'rank_reward', 'referral_bonus', 'binary_bonus') NOT NULL,
+  transaction_type ENUM('deposit', 'withdrawal', 'level_income', 'matching_bonus', 'roi_distribution', 'rank_reward', 'referral_bonus', 'binary_bonus', 'transfer_out', 'transfer_in') NOT NULL,
   amount DECIMAL(15, 6) NOT NULL,
 
   from_user_id CHAR(36),
@@ -114,6 +114,8 @@ CREATE TABLE mlm_transactions (
   package_id CHAR(36),
 
   description TEXT,
+  method VARCHAR(50),
+  metadata JSON,
   status ENUM('pending', 'completed', 'failed', 'cancelled') DEFAULT 'completed' NOT NULL,
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

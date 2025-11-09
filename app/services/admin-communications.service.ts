@@ -1,4 +1,3 @@
-// @ts-nocheck - TODO: Migrate Supabase calls to MySQL backend API
 /**
  * Admin Communications Service
  * Manage emails, SMS, announcements, news, and push notifications

@@ -4,8 +4,8 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { getUserDashboard, getTeamStats } from '../../services/mlm.service';
-import { hasActiveRobotSubscription } from '../../services/mlm.service';
+import { getUserDashboard, hasActiveRobotSubscription } from '../../services/mlm-client';
+import { getTeamStats } from '../../services/team.service';
 import { UserDashboardData } from '../../types/mlm.types';
 import DEXTerminal from '../../components/dex/DEXTerminal';
 

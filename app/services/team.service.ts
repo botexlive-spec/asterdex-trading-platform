@@ -1,7 +1,6 @@
 /**
  * Team Service - MySQL Backend API
  * Handles all team/referral operations using MySQL backend
- * NO SUPABASE - Pure MySQL API
  */
 
 export interface TeamMember {
