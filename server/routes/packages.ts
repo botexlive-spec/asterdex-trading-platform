@@ -129,13 +129,15 @@ router.post('/purchase', authenticateToken, async (req: Request, res: Response) 
     expiryDate.setDate(expiryDate.getDate() + durationDays);
 
     // Insert user package
-    await query(
+    const userPackageResult = await query(
       `INSERT INTO user_packages
        (user_id, package_id, investment_amount, daily_roi_amount, total_roi_earned,
         total_roi_limit, status, activation_date, expiry_date, created_at, updated_at)
        VALUES (?, ?, ?, ?, 0, ?, 'active', ?, ?, NOW(), NOW())`,
       [userId, package_id, amount, dailyROI, totalROILimit, activationDate, expiryDate]
     );
+
+    const userPackageId = userPackageResult.insertId;
 
     // Deduct from wallet
     await query(
@@ -151,8 +153,14 @@ router.post('/purchase', authenticateToken, async (req: Request, res: Response) 
       [userId, amount, `Purchased ${packageData.name} - $${amount}`]
     );
 
-    // Calculate and distribute level income commissions
-    await distributeLevelIncome(userId, amount, packageData);
+    // Distribute 30-level income commissions with eligibility checks
+    try {
+      const { distribute30LevelIncome } = await import('../services/level-income.service');
+      await distribute30LevelIncome(userId, amount, package_id, String(userPackageId));
+    } catch (error) {
+      console.error(`⚠️  30-level income distribution failed:`, error);
+      // Don't fail the entire purchase if level income fails
+    }
 
     // Update binary tree volume for binary matching
     try {
@@ -184,82 +192,6 @@ router.post('/purchase', authenticateToken, async (req: Request, res: Response) 
     res.status(500).json({ error: 'Failed to purchase package' });
   }
 });
-
-/**
- * Distribute level income commissions
- */
-async function distributeLevelIncome(userId: string, amount: number, packageData: any) {
-  try {
-    const levelPercentages = packageData.level_income_percentages || [];
-
-    // Get user's sponsor
-    const userResult = await query(
-      'SELECT sponsor_id FROM users WHERE id = ? LIMIT 1',
-      [userId]
-    );
-
-    if (userResult.rows.length === 0 || !userResult.rows[0].sponsor_id) {
-      console.log('No sponsor found for user, skipping level income');
-      return;
-    }
-
-    let currentSponsorId = userResult.rows[0].sponsor_id;
-    let level = 1;
-
-    // Traverse up the sponsor chain
-    while (currentSponsorId && level <= levelPercentages.length) {
-      const percentage = levelPercentages[level - 1];
-
-      if (percentage > 0) {
-        const commissionAmount = (amount * percentage) / 100;
-
-        // Credit commission to sponsor
-        await query(
-          `UPDATE users SET
-           wallet_balance = wallet_balance + ?,
-           total_earnings = total_earnings + ?,
-           commission_earnings = commission_earnings + ?
-           WHERE id = ?`,
-          [commissionAmount, commissionAmount, commissionAmount, currentSponsorId]
-        );
-
-        // Record commission
-        await query(
-          `INSERT INTO commissions
-           (user_id, from_user_id, commission_type, amount, level, package_id, created_at)
-           VALUES (?, ?, 'level_income', ?, ?, ?, NOW())`,
-          [currentSponsorId, userId, commissionAmount, level, packageData.id]
-        );
-
-        // Record transaction
-        await query(
-          `INSERT INTO mlm_transactions
-           (user_id, transaction_type, amount, description, status, created_at, updated_at)
-           VALUES (?, 'level_income', ?, ?, 'completed', NOW(), NOW())`,
-          [currentSponsorId, commissionAmount, `Level ${level} commission from package purchase`]
-        );
-
-        console.log(`✅ Level ${level} commission: $${commissionAmount} to ${currentSponsorId}`);
-      }
-
-      // Get next sponsor
-      const sponsorResult = await query(
-        'SELECT sponsor_id FROM users WHERE id = ? LIMIT 1',
-        [currentSponsorId]
-      );
-
-      if (sponsorResult.rows.length === 0 || !sponsorResult.rows[0].sponsor_id) {
-        break;
-      }
-
-      currentSponsorId = sponsorResult.rows[0].sponsor_id;
-      level++;
-    }
-
-  } catch (error) {
-    console.error('❌ Level income distribution error:', error);
-  }
-}
 
 /**
  * GET /api/packages/my-packages

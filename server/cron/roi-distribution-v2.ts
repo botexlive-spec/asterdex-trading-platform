@@ -181,9 +181,15 @@ export async function distributeEnhancedROI() {
 
       console.log(`✅ Distributed $${totalROI.toFixed(2)} to ${pkg.email} (Base: $${baseROI.toFixed(2)}, Booster: $${boosterROI.toFixed(2)})`);
 
-      // NOW: Distribute ROI-on-ROI to upline sponsors
-      const roiOnROIAmount = await distributeROIonROI(userId, totalROI);
-      roiOnROIDistributed += roiOnROIAmount;
+      // NOW: Distribute ROI-on-ROI to upline sponsors using 30-level system
+      const roiEventId = `roi_${packageId}_${new Date().toISOString().split('T')[0]}`;
+      try {
+        const { distributeROIonROI30Levels } = await import('../services/level-income.service');
+        const result = await distributeROIonROI30Levels(userId, totalROI, roiEventId);
+        roiOnROIDistributed += result.total_amount;
+      } catch (error) {
+        console.error(`⚠️  ROI-on-ROI distribution failed for ${userId}:`, error);
+      }
 
       // Mark package as completed if reached limit
       const newTotal = totalROIEarned + totalROI;
