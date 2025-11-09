@@ -166,6 +166,12 @@ const adminMenuItems: MenuItem[] = [
     path: '/admin/reports',
   },
   {
+    id: 'admin-reports-enhanced',
+    label: 'Enhanced Reports',
+    icon: '📊',
+    path: '/admin/reports-enhanced',
+  },
+  {
     id: 'admin-communications',
     label: 'Communications',
     icon: '📧',

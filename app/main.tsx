@@ -82,6 +82,7 @@ const SystemConfiguration = lazy(() => import('./pages/admin/SystemConfiguration
 const IncomeSimulator = lazy(() => import('./pages/admin/IncomeSimulator'));
 const WithdrawalApproval = lazy(() => import('./pages/admin/WithdrawalApproval'));
 const PlanSettings = lazy(() => import('./pages/admin/PlanSettings'));
+const ReportsEnhanced = lazy(() => import('./pages/admin/ReportsEnhanced'));
 
 async function loadRuntimeConfig() {
   return new Promise<void>((resolve) => {
@@ -389,6 +390,7 @@ const router = createBrowserRouter([
           { path: 'settings', element: <SettingsAdmin /> },
           { path: 'configuration', element: <SystemConfiguration /> },
           { path: 'plan-settings', element: <PlanSettings /> },
+          { path: 'reports-enhanced', element: <ReportsEnhanced /> },
         ],
       },
     ],
