@@ -1,4 +1,4 @@
-import React, { lazy } from 'react';
+import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
@@ -408,7 +408,23 @@ loadRuntimeConfig().then(() => {
         <SettingsProvider>
           <AuthProvider>
             <PlanSettingsProvider>
-              <RouterProvider router={router} />
+              <Suspense fallback={
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: '100vh',
+                  background: '#0f172a'
+                }}>
+                  <div style={{
+                    color: '#f8fafc',
+                    fontSize: '18px',
+                    fontWeight: '500'
+                  }}>Loading...</div>
+                </div>
+              }>
+                <RouterProvider router={router} />
+              </Suspense>
               <Toaster
                 position="top-right"
                 reverseOrder={false}
