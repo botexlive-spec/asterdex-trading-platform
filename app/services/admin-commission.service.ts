@@ -188,52 +188,13 @@ export const getDefaultSettings = (): CommissionSettings => {
  */
 export const saveCommissionSettings = async (settings: CommissionSettings): Promise<void> => {
   try {
-        // Verify admin access
-    // Admin auth handled by backend// Check if settings exist
-      .from('commission_settings')
-      .select('id')
-      .limit(1)
-      .single();
+    // TODO: Implement backend API endpoint for saving commission settings
+    // await apiRequest('/api/admin/commission/settings', {
+    //   method: 'PUT',
+    //   body: JSON.stringify(settings)
+    // });
 
-    if (existing) {
-      // Update existing
-        .from('commission_settings')
-        .update({
-          level_commissions: settings.level_commissions,
-          binary_settings: settings.binary_settings,
-          roi_settings: settings.roi_settings,
-          rank_rewards: settings.rank_rewards,
-          booster_settings: settings.booster_settings,
-          active_levels: settings.active_levels || 30,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', existing.id);
-
-      if (error) throw error;
-    } else {
-      // Insert new
-        .from('commission_settings')
-        .insert([{
-          level_commissions: settings.level_commissions,
-          binary_settings: settings.binary_settings,
-          roi_settings: settings.roi_settings,
-          rank_rewards: settings.rank_rewards,
-          booster_settings: settings.booster_settings,
-          active_levels: settings.active_levels || 30,
-        }]);
-
-      if (error) throw error;
-    }
-
-    // Log the change to changelog
-    await logCommissionChange({
-      change_type: 'settings_update',
-      section: 'all',
-      new_value: settings,
-      description: 'Commission settings updated',
-    });
-
-    console.log('Commission settings saved successfully');
+    console.log('Commission settings saved successfully (placeholder)');
   } catch (error: any) {
     console.error('Error saving commission settings:', error);
     throw new Error(error.message || 'Failed to save commission settings');
@@ -245,18 +206,12 @@ export const saveCommissionSettings = async (settings: CommissionSettings): Prom
  */
 export const getCommissionHistory = async (limit: number = 100): Promise<CommissionRun[]> => {
   try {
-        // Verify admin access
-    // Admin auth handled by backend.from('commission_runs')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    // TODO: Implement backend API endpoint for commission history
+    // const data = await apiRequest(`/api/admin/commission/history?limit=${limit}`);
+    // return data.runs || [];
 
-    if (error) {
-      console.log('No commission runs found:', error);
-      return [];
-    }
-
-    return data || [];
+    console.log('Returning empty commission history (placeholder)');
+    return [];
   } catch (error: any) {
     console.error('Error getting commission history:', error);
     return [];
@@ -272,22 +227,14 @@ export const processCommissionRun = async (
   dateTo?: string
 ): Promise<{ affected_users: number; total_amount: number }> => {
   try {
-    // This would typically call a backend API or database function
-    // For now, we'll create a placeholder run record
-      .from('commission_runs')
-      .insert([{
-        type,
-        date_from: dateFrom,
-        date_to: dateTo,
-        status: 'pending',
-      }])
-      .select()
-      .single();
+    // TODO: Implement backend API endpoint for processing commission runs
+    // const data = await apiRequest('/api/admin/commission/run', {
+    //   method: 'POST',
+    //   body: JSON.stringify({ type, dateFrom, dateTo })
+    // });
+    // return data;
 
-    if (error) throw error;
-
-    // In a real implementation, this would trigger the actual commission calculation
-    // For now, return mock data
+    console.log('Processing commission run (placeholder)');
     return {
       affected_users: 0,
       total_amount: 0,
@@ -308,54 +255,13 @@ export const manualCommissionAdjustment = async (
   reason: string
 ): Promise<void> => {
   try {
-        // Verify admin access
-    // Admin auth handled by backend// Get user's current wallet balance
-      .from('wallets')
-      .select('available_balance, total_balance')
-      .eq('user_id', userId)
-      .single();
+    // TODO: Implement backend API endpoint for manual adjustments
+    // await apiRequest('/api/admin/commission/adjustment', {
+    //   method: 'POST',
+    //   body: JSON.stringify({ userId, amount, type, reason })
+    // });
 
-    if (!wallet) {
-      throw new Error('User wallet not found');
-    }
-
-    const adjustedAmount = type === 'add' ? amount : -amount;
-
-    // Update wallet balance
-      .from('wallets')
-      .update({
-        available_balance: wallet.available_balance + adjustedAmount,
-        total_balance: wallet.total_balance + adjustedAmount,
-      })
-      .eq('user_id', userId);
-
-    if (walletError) throw walletError;
-
-    // Create transaction record
-      .from('mlm_transactions')
-      .insert([{
-        user_id: userId,
-        transaction_type: 'manual_adjustment',
-        amount: adjustedAmount,
-        description: reason,
-        status: 'completed',
-      }]);
-
-    if (txError) throw txError;
-
-    // Log admin action
-      .from('admin_actions')
-      .insert([{
-        action_type: 'commission_adjustment',
-        target_id: userId,
-        details: {
-          amount: adjustedAmount,
-          type,
-          reason,
-        },
-      }]);
-
-    console.log(`Manual adjustment of ${adjustedAmount} applied to user ${userId}`);
+    console.log(`Manual adjustment of ${amount} (${type}) applied to user ${userId} (placeholder)`);
   } catch (error: any) {
     console.error('Error applying manual adjustment:', error);
     throw new Error(error.message || 'Failed to apply manual adjustment');
@@ -367,32 +273,12 @@ export const manualCommissionAdjustment = async (
  */
 export const getCommissionStats = async () => {
   try {
-        // Verify admin access
-    // Admin auth handled by backend// Get total commissions by type
-      .from('mlm_transactions')
-      .select('transaction_type, amount')
-      .in('transaction_type', [
-        'direct_income',
-        'level_income',
-        'matching_bonus',
-        'rank_reward',
-        'booster_income',
-        'roi_income',
-      ]);
+    // TODO: Implement backend API endpoint for commission stats
+    // const data = await apiRequest('/api/admin/commission/stats');
+    // return data;
 
-    const stats = {
-      by_type: {} as Record<string, number>,
-      total: 0,
-    };
-
-    commissions?.forEach((c: any) => {
-      const type = c.transaction_type;
-      const amount = Math.abs(c.amount);
-      stats.by_type[type] = (stats.by_type[type] || 0) + amount;
-      stats.total += amount;
-    });
-
-    return stats;
+    console.log('Returning empty commission stats (placeholder)');
+    return { by_type: {}, total: 0 };
   } catch (error: any) {
     console.error('Error getting commission stats:', error);
     return { by_type: {}, total: 0 };
@@ -412,21 +298,13 @@ export const logCommissionChange = async (change: {
   affected_users?: number;
 }): Promise<void> => {
   try {
+    // TODO: Implement backend API endpoint for logging changes
+    // await apiRequest('/api/admin/commission/changelog', {
+    //   method: 'POST',
+    //   body: JSON.stringify(change)
+    // });
 
-      .from('commission_changelog')
-      .insert([{
-        changed_by: user?.id,
-        change_type: change.change_type,
-        section: change.section,
-        old_value: change.old_value,
-        new_value: change.new_value,
-        description: change.description,
-        affected_users: change.affected_users || 0,
-      }]);
-
-    if (error) {
-      console.error('Error logging change:', error);
-    }
+    console.log('Logged commission change (placeholder):', change.description);
   } catch (error: any) {
     console.error('Error logging commission change:', error);
   }
@@ -437,17 +315,12 @@ export const logCommissionChange = async (change: {
  */
 export const getCommissionChangelog = async (limit: number = 50): Promise<ChangelogEntry[]> => {
   try {
-    // Admin auth handled by backend.from('commission_changelog')
-      .select(`
-        *,
-        user:changed_by(email, raw_user_meta_data)
-      `)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    // TODO: Implement backend API endpoint for changelog
+    // const data = await apiRequest(`/api/admin/commission/changelog?limit=${limit}`);
+    // return data.entries || [];
 
-    if (error) throw error;
-
-    return data || [];
+    console.log('Returning empty changelog (placeholder)');
+    return [];
   } catch (error: any) {
     console.error('Error getting changelog:', error);
     return [];
@@ -459,14 +332,12 @@ export const getCommissionChangelog = async (limit: number = 50): Promise<Change
  */
 export const getCommissionRuns = async (limit: number = 50): Promise<any[]> => {
   try {
-    // Admin auth handled by backend.from('commission_runs')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    // TODO: Implement backend API endpoint for commission runs
+    // const data = await apiRequest(`/api/admin/commission/runs?limit=${limit}`);
+    // return data.runs || [];
 
-    if (error) throw error;
-
-    return data || [];
+    console.log('Returning empty commission runs (placeholder)');
+    return [];
   } catch (error: any) {
     console.error('Error getting commission runs:', error);
     return [];
