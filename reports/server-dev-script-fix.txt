@@ -1,0 +1,414 @@
+================================================================================
+SERVER DEV SCRIPT FIX - Running Backend from server/ Directory
+================================================================================
+Date: 2025-11-09
+Objective: Fix npm run dev in server/ directory to start backend instead of Vite
+Status: ✅ COMPLETE
+
+================================================================================
+PROBLEM SUMMARY
+================================================================================
+
+Issue:
+- Running "npm run dev" from C:\Projects\asterdex-8621-main\server directory
+- Command incorrectly started Vite (frontend) instead of the backend
+- No package.json existed in server/ directory
+- Backend could only be started from root with "npm run dev:server"
+
+Root Cause:
+The project had a monorepo structure with package.json only at the root level.
+Running npm commands from server/ directory would use the root package.json,
+which had "dev" script configured to start Vite.
+
+================================================================================
+SOLUTION IMPLEMENTED
+================================================================================
+
+1. Created server/package.json
+----------------------------
+Location: C:\Projects\asterdex-8621-main\server\package.json
+
+Content:
+```json
+{
+  "name": "finaster-mlm-server",
+  "version": "1.0.0",
+  "description": "Finaster MLM Backend API Server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon --watch . --exec tsx index.ts",
+    "start": "tsx index.ts",
+    "dev:debug": "nodemon --watch . --inspect --exec tsx index.ts"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
+```
+
+Key Features:
+  ✅ "dev" script uses nodemon for auto-reload on file changes
+  ✅ Uses tsx to run TypeScript directly without compilation
+  ✅ Watches current directory (.) for changes
+  ✅ Starts from index.ts (server/index.ts)
+  ✅ Additional "start" script for production-like startup
+  ✅ "dev:debug" script for debugging with --inspect flag
+
+2. Created server/.env
+----------------------------
+Location: C:\Projects\asterdex-8621-main\server\.env
+
+Configuration:
+```env
+# MYSQL CONFIGURATION
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DATABASE=finaster_mlm
+MYSQL_USER=root
+MYSQL_PASSWORD=root
+
+# API Server Configuration
+API_PORT=3001
+JWT_SECRET=8ca742cff29061703ea38f0d68eb0646ea597f690ac35e4fef904210aff833851...
+JWT_REFRESH_SECRET=b4f8e1c9d3a2e7f6c8b5a9d2e1f3c6a8b7d4e2f5c9a1d6b8e3f7c2a5d9e1f4c6
+NODE_ENV=development
+
+# CORS Configuration
+VITE_APP_URL=http://localhost:5173
+```
+
+This allows the backend to run independently with its own environment config.
+
+3. Verified server/index.ts
+----------------------------
+Location: C:\Projects\asterdex-8621-main\server\index.ts
+
+Verified Features:
+  ✅ Express server configured
+  ✅ Port 3001 (from API_PORT env var)
+  ✅ MySQL database connection via ./db.ts
+  ✅ Health check endpoint at /api/health
+  ✅ CORS configured for frontend (localhost:5173)
+  ✅ All API routes mounted:
+     - /api/auth (authentication)
+     - /api/admin (admin panel)
+     - /api/dashboard (user dashboard)
+     - /api/packages (investment packages)
+     - /api/team (MLM team structure)
+     - /api/genealogy (binary tree)
+     - /api/transactions (financial transactions)
+     - /api/ranks (user ranks)
+     - /api/wallet (wallet management)
+     - /api/kyc (KYC verification)
+     - /api/support (support tickets)
+     - /api/config (system configuration)
+     - /api/reports (analytics reports)
+     - /api/audit (audit logs)
+     - /api/planSettings (plan settings)
+     - /api/booster (booster packages)
+     - /api/rewards (reward system)
+     - /api/binary (binary tree operations)
+
+  ✅ Scheduled Cron Jobs:
+     - Enhanced ROI Distribution: Daily at 00:00 UTC
+     - Booster Expiration: Daily at 01:00 UTC
+     - Business Volume Calculation: Daily at 02:00 UTC
+     - Binary Matching: Daily at 02:30 UTC
+     - Monthly Rewards: 1st of month at 03:00 UTC
+
+================================================================================
+VERIFICATION RESULTS
+================================================================================
+
+1. Backend Startup Test
+----------------------------
+Command: cd C:\Projects\asterdex-8621-main\server && npm run dev
+
+Output:
+```
+> finaster-mlm-server@1.0.0 dev
+> nodemon --watch . --exec tsx index.ts
+
+[nodemon] 3.1.10
+[nodemon] to restart at any time, enter `rs`
+[nodemon] watching path(s): *.*
+[nodemon] watching extensions: ts,json
+[nodemon] starting `tsx index.ts`
+[dotenv@17.2.3] injecting env (10) from .env
+
+============================================================
+🚀 Finaster MLM API Server
+============================================================
+📍 Server running on: http://localhost:3001
+🔗 Health check: http://localhost:3001/api/health
+🔐 Auth endpoint: http://localhost:3001/api/auth/login
+💾 Database: finaster_mlm
+🌍 CORS origin: http://localhost:5173
+============================================================
+
+📅 Scheduled Cron Jobs:
+  ├─ Enhanced ROI Distribution: Daily at 00:00 UTC
+  ├─ Booster Expiration: Daily at 01:00 UTC
+  ├─ Business Volume Calculation: Daily at 02:00 UTC
+  ├─ Binary Matching: Daily at 02:30 UTC
+  └─ Monthly Rewards: 1st of month at 03:00 UTC
+
+✅ API Server connected to MySQL
+```
+
+✅ SUCCESS: Backend starts correctly with the expected message!
+
+2. Health Endpoint Test
+----------------------------
+Command: curl http://localhost:3001/api/health
+
+Response:
+```json
+{
+    "status": "healthy",
+    "database": "connected",
+    "timestamp": "2025-11-09T17:54:21.000Z"
+}
+```
+
+✅ SUCCESS: Health endpoint responding correctly!
+
+3. Port Verification
+----------------------------
+Command: netstat -ano | findstr :3001
+
+Output:
+```
+TCP    0.0.0.0:3001           0.0.0.0:0              LISTENING       16812
+TCP    [::]:3001              [::]:0                 LISTENING       16812
+```
+
+✅ SUCCESS: Backend listening on port 3001!
+
+4. Dependencies Verification
+----------------------------
+All required dependencies are installed in root node_modules:
+  ✅ nodemon v3.1.10 (installed in root devDependencies)
+  ✅ tsx v4.20.6 (installed in root devDependencies)
+  ✅ dotenv v17.2.3 (installed in root devDependencies)
+  ✅ express v5.1.0 (installed in root dependencies)
+  ✅ mysql2 v3.15.3 (installed in root dependencies)
+  ✅ cors v2.8.5 (installed in root dependencies)
+  ✅ jsonwebtoken v9.0.2 (installed in root dependencies)
+  ✅ bcryptjs v3.0.3 (installed in root dependencies)
+  ✅ node-cron v4.2.1 (installed in root dependencies)
+
+The server/package.json uses the parent directory's node_modules,
+so no additional npm install is required in the server directory.
+
+================================================================================
+USAGE INSTRUCTIONS
+================================================================================
+
+Starting the Backend:
+```bash
+# Option 1: From server directory (NEW - now works!)
+cd C:\Projects\asterdex-8621-main\server
+npm run dev
+
+# Option 2: From root directory (still works)
+cd C:\Projects\asterdex-8621-main
+npm run dev:server
+
+# Option 3: Production-like start from server directory
+cd C:\Projects\asterdex-8621-main\server
+npm start
+```
+
+Available Scripts in server/package.json:
+- npm run dev        # Start with nodemon (auto-reload on changes)
+- npm start          # Start without nodemon (simple tsx execution)
+- npm run dev:debug  # Start with Node.js debugger enabled
+
+Stopping the Backend:
+- Press Ctrl+C in the terminal where it's running
+- Or type "rs" and Enter to restart
+- Or use: taskkill /F /PID <process_id>
+
+================================================================================
+FILE STRUCTURE
+================================================================================
+
+Project Structure:
+```
+C:\Projects\asterdex-8621-main\
+├── package.json              # Root package.json (dependencies)
+├── .env                      # Root environment config
+├── node_modules/             # Shared dependencies
+├── app/                      # Frontend (React/Vite)
+├── server/                   # Backend (Express/TypeScript)
+│   ├── package.json          # Backend-specific scripts (NEW)
+│   ├── .env                  # Backend environment config (NEW)
+│   ├── index.ts              # Backend entry point
+│   ├── db.ts                 # MySQL connection
+│   ├── routes/               # API routes
+│   ├── services/             # Business logic
+│   ├── middleware/           # Express middleware
+│   └── cron/                 # Scheduled jobs
+└── public/                   # Static files
+```
+
+================================================================================
+BENEFITS OF THIS SETUP
+================================================================================
+
+1. Independent Backend Development
+   - Can run backend without starting frontend
+   - Faster startup (only backend, no Vite build)
+   - Easier debugging and testing
+
+2. Proper Script Naming
+   - "npm run dev" in server/ starts backend (intuitive)
+   - No confusion with frontend "npm run dev"
+
+3. Auto-reload on Changes
+   - nodemon watches for file changes in server/ directory
+   - Automatically restarts on .ts and .json file changes
+   - Faster development iteration
+
+4. Environment Isolation
+   - server/.env contains only backend-relevant variables
+   - No frontend build variables cluttering backend config
+   - Clear separation of concerns
+
+5. Debugging Support
+   - "npm run dev:debug" enables Node.js inspector
+   - Can attach debugger to running backend process
+   - Useful for complex troubleshooting
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+If Backend Doesn't Start:
+
+1. Check MySQL is Running
+   ```bash
+   # Windows: Check MySQL service
+   sc query MySQL84
+
+   # Test MySQL connection
+   mysql -u root -proot finaster_mlm -e "SELECT 1"
+   ```
+
+2. Check Port 3001 is Available
+   ```bash
+   netstat -ano | findstr :3001
+
+   # If occupied, kill the process
+   taskkill /F /PID <process_id>
+   ```
+
+3. Verify Dependencies
+   ```bash
+   # From root directory
+   cd C:\Projects\asterdex-8621-main
+   npm install
+   ```
+
+4. Check .env Configuration
+   ```bash
+   cat C:\Projects\asterdex-8621-main\server\.env
+
+   # Ensure MYSQL_PASSWORD matches your MySQL root password
+   ```
+
+5. Check for Syntax Errors
+   ```bash
+   cd C:\Projects\asterdex-8621-main\server
+   npx tsx index.ts
+
+   # This will show any TypeScript compilation errors
+   ```
+
+================================================================================
+COMPARISON: BEFORE vs AFTER
+================================================================================
+
+BEFORE:
+❌ Running "npm run dev" from server/ started Vite
+❌ Had to remember to use "npm run dev:server" from root
+❌ Confusing for developers (non-intuitive)
+❌ No server/package.json
+❌ No server/.env
+
+AFTER:
+✅ Running "npm run dev" from server/ starts backend
+✅ Intuitive command structure
+✅ Independent backend development
+✅ server/package.json with proper scripts
+✅ server/.env with backend-specific config
+✅ nodemon auto-reload support
+
+================================================================================
+RELATED ROOT SCRIPTS (Still Available)
+================================================================================
+
+From root directory (C:\Projects\asterdex-8621-main):
+
+Frontend Scripts:
+  npm run dev              # Start Vite frontend (port 5173)
+  npm run build            # Build frontend for production
+  npm run preview          # Preview production build
+
+Backend Scripts:
+  npm run dev:server       # Start backend with nodemon
+  npm run server           # Start backend with tsx
+
+Full Stack:
+  npm run dev:all          # Start both frontend and backend concurrently
+
+================================================================================
+TECHNICAL NOTES
+================================================================================
+
+Node.js Environment:
+  - Node.js: v22.12.0
+  - Package Manager: npm
+  - TypeScript Runner: tsx v4.20.6
+  - Process Manager: nodemon v3.1.10
+
+Database:
+  - MySQL: 8.4
+  - Database: finaster_mlm
+  - Host: localhost:3306
+  - User: root
+
+Backend Framework:
+  - Express: v5.1.0
+  - TypeScript: 5.8.3
+  - Module Type: ESM (type: "module")
+
+Hot Reload:
+  - nodemon watches: *.ts, *.json files
+  - Auto-restart on file changes
+  - Manual restart: type "rs" + Enter
+
+================================================================================
+RESOLUTION STATUS
+================================================================================
+
+✅ Created server/package.json with correct "dev" script
+✅ Created server/.env with backend configuration
+✅ Verified server/index.ts is correct (Express on port 3001)
+✅ Verified MySQL connection works
+✅ Verified /api/health endpoint responds
+✅ Tested "npm run dev" from server/ directory - WORKS!
+✅ Backend shows correct startup message
+✅ nodemon auto-reload working
+✅ All dependencies present and working
+
+The issue is completely resolved!
+
+You can now run "npm run dev" from the server/ directory and it will
+correctly start the Finaster MLM backend API server on port 3001.
+
+================================================================================
+END OF REPORT
+================================================================================

@@ -1,0 +1,19 @@
+ASTERDEX MLM - END-TO-END VERIFICATION TEST
+Date: 2025-11-09
+
+PHASE 1: BACKEND API CONNECTIVITY
+================================================================================
+{"status":"healthy","database":"connected","timestamp":"2025-11-09T16:19:47.000Z"}
+{"status":"healthy","database":"connected","timestamp":"2025-11-09T16:19:47.000Z"}
+PHASE 2: AUTHENTICATION
+================================================================================
+Testing admin login...
+{"user":{"id":"00000000-0000-0000-0000-000000000001","email":"admin@finaster.com","full_name":"System Administrator","role":"admin","sponsor_id":null,"referral_code":"ADMIN001","wallet_balance":"0.000000","total_earnings":"0.000000","total_investment":"0.000000","total_withdrawal":"0.000000","current_rank":"ambassador","left_volume":"0.000000","right_volume":"0.000000","wallet_address":null,"phone_number":null,"country":null,"kyc_status":"not_submitted","email_verified":1,"is_active":1,"created_at":"2025-11-07T06:36:00.000Z","updated_at":"2025-11-07T06:36:00.000Z","roi_on_roi_earnings":"0.000000","booster_earnings":"0.000000","reward_earnings":"0.000000","first_investment_date":null,"direct_referrals_count":0,"last_login_at":null,"last_login_ip":null,"failed_login_attempts":0,"account_locked_until":null},"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMSIsImVtYWlsIjoiYWRtaW5AZmluYXN0ZXIuY29tIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzYyNzA0Mjg3LCJleHAiOjE3NjMzMDkwODd9.VzbQXt9Qy4kEia_5HYw2qTIAMyZBTUlKFwXy8fSO-1w","refreshToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMSIsImVtYWlsIjoiYWRtaW5AZmluYXN0ZXIuY29tIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzYyNzA0Mjg3LCJleHAiOjE3NjMzMDkwODd9.VzbQXt9Qy4kEia_5HYw2qTIAMyZBTUlKFwXy8fSO-1w"}
+Token extracted: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwM...
+
+PHASE 3: AUTHENTICATED ENDPOINTS
+================================================================================
+Testing /api/auth/me...
+{"user":{"id":"00000000-0000-0000-0000-000000000001","email":"admin@finaster.com","full_name":"System Administrator","role":"admin","sponsor_id":null,"referral_code":"ADMIN001","wallet_balance":"0.000000","total_earnings":"0.000000","total_investment":"0.000000","total_withdrawal":"0.000000","current_rank":"ambassador","left_volume":"0.000000","right_volume":"0.000000","wallet_address":null,"phone_number":null,"country":null,"kyc_status":"not_submitted","email_verified":1,"is_active":1,"created_at":"2025-11-07T06:36:00.000Z","updated_at":"2025-11-07T06:36:00.000Z","roi_on_roi_earnings":"0.000000","booster_earnings":"0.000000","reward_earnings":"0.000000","first_investment_date":null,"direct_referrals_count":0,"last_login_at":null,"last_login_ip":null,"failed_login_attempts":0,"account_locked_until":null}}
+Testing /api/dashboard...
+{"user":{"id":"00000000-0000-0000-0000-000000000001","email":"admin@finaster.com","full_name":"System Administrator","role":"admin","current_rank":"ambassador","referral_code":"ADMIN001","wallet_balance":0,"total_investment":0,"total_earnings":0,"roi_earnings":0,"commission_earnings":0,"binary_earnings":0},"statistics":{"today_earnings":0,"week_earnings":0,"month_earnings":0,"roi_earned":0,"direct_referrals":1,"total_team":14,"left_binary_volume":0,"right_binary_volume":0},"packages":{"active_count":0,"expiring_soon":0},"next_rank":{"current":"ambassador","next":"ambassador","progress":14}}
