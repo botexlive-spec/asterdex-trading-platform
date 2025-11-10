@@ -13,10 +13,11 @@ export default function App() {
   const defaultLanguage = getUserLanguage();
   const location = useLocation();
 
-  // Don't load OrderlyProvider (trading/wallet functionality) for admin/user routes
-  const needsOrderlyProvider = !location.pathname.startsWith('/admin') &&
-                                !location.pathname.startsWith('/user') &&
-                                !location.pathname.startsWith('/auth');
+  // Only load OrderlyProvider (trading/wallet functionality) for trading routes
+  // Trading routes: /perp/* and /portfolio/*
+  // MLM routes: /dashboard, /team, /wallet, /packages, etc. - don't need OrderlyProvider
+  const needsOrderlyProvider = location.pathname.startsWith('/perp') ||
+                                location.pathname.startsWith('/portfolio');
 
   const content = (
     <div className="pb-0 md:pb-0">
