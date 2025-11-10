@@ -27,6 +27,7 @@ const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState<'today' | 'week' | 'month' | 'all'>('month');
   const [loading, setLoading] = useState(true);
+  const [databaseError, setDatabaseError] = useState(false);
 
   // Real data state
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -64,9 +65,20 @@ const AdminDashboard: React.FC = () => {
       setTopUsers(users);
       setGrowthData(growth);
       setRevenueData(revenue);
+      setDatabaseError(false); // Clear database error on successful load
     } catch (error: any) {
-      console.error('Error loading dashboard data:', error);
+      console.error('❌ Error loading dashboard data:', error);
       console.error('Full error details:', JSON.stringify(error, null, 2));
+
+      // Check if this is a database-specific error (same logic as service)
+      const isDatabaseError = error.message?.includes('relation') ||
+                             error.message?.includes('does not exist') ||
+                             error.message?.includes('database_not_setup') ||
+                             error.message?.includes('Database not available') ||
+                             error.message?.includes('Connection refused');
+
+      setDatabaseError(isDatabaseError);
+      console.log(`🔍 Database error detected: ${isDatabaseError}`);
 
       // Show detailed error messages
       if (error.message?.includes('not authenticated') || error.message?.includes('Authentication required')) {
@@ -76,9 +88,10 @@ const AdminDashboard: React.FC = () => {
         }, 2000);
       } else if (error.message?.includes('Admin access required') || error.message?.includes('permission')) {
         toast.error('Admin access required. Your account does not have admin privileges.');
-      } else if (error.message?.includes('relation') || error.message?.includes('does not exist')) {
+      } else if (isDatabaseError) {
         toast.error('Database not set up. Please deploy database files first.');
       } else {
+        // For other errors, show toast but don't trigger database setup screen
         toast.error(`Failed to load dashboard data: ${error.message || 'Unknown error'}`);
       }
     } finally {
@@ -228,8 +241,8 @@ const AdminDashboard: React.FC = () => {
     );
   }
 
-  // Show setup prompt if no data loaded (database not deployed)
-  if (!loading && !stats) {
+  // Show setup prompt only for database errors (not for auth/permission errors)
+  if (!loading && databaseError) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-4xl mx-auto">

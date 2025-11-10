@@ -112,16 +112,44 @@ export async function getTeamMembers(): Promise<TeamResponse> {
     console.log('🔍 [Team Service] Fetching team members from MySQL API...');
     const startTime = Date.now();
 
-    const data = await apiRequest<TeamResponse>('/team/members');
+    const data = await apiRequest<TeamResponse>('/api/team/members');
 
     const loadTime = Date.now() - startTime;
-    console.log(`✅ [Team Service] Loaded ${data.summary.total_team} members in ${loadTime}ms`);
-    console.log(`📊 [Team Service] Direct: ${data.summary.direct_members}, Total: ${data.summary.total_team}, Levels: ${data.summary.max_depth}`);
+    console.log(`✅ [Team Service] Loaded ${data.summary?.total_team || 0} members in ${loadTime}ms`);
+    console.log(`📊 [Team Service] Direct: ${data.summary?.direct_members || 0}, Total: ${data.summary?.total_team || 0}, Levels: ${data.summary?.max_depth || 0}`);
 
-    return data;
+    // Ensure data has proper structure with fallbacks
+    return {
+      success: data.success !== false,
+      summary: {
+        direct_members: data.summary?.direct_members || 0,
+        total_team: data.summary?.total_team || 0,
+        total_active: data.summary?.total_active || 0,
+        total_inactive: data.summary?.total_inactive || 0,
+        total_investment: data.summary?.total_investment || 0,
+        total_earnings: data.summary?.total_earnings || 0,
+        max_depth: data.summary?.max_depth || 0,
+      },
+      levels: data.levels || [],
+      members: data.members || [],
+    };
   } catch (error: any) {
     console.error('❌ [Team Service] Error fetching team members:', error);
-    throw new Error(error.message || 'Failed to fetch team members');
+    // Return empty structure instead of throwing
+    return {
+      success: false,
+      summary: {
+        direct_members: 0,
+        total_team: 0,
+        total_active: 0,
+        total_inactive: 0,
+        total_investment: 0,
+        total_earnings: 0,
+        max_depth: 0,
+      },
+      levels: [],
+      members: [],
+    };
   }
 }
 
@@ -132,7 +160,7 @@ export async function getDirectReferrals(): Promise<TeamMember[]> {
   try {
     console.log('🔍 [Team Service] Fetching direct referrals...');
 
-    const data = await apiRequest<{ success: boolean; count: number; members: TeamMember[] }>('/team/direct');
+    const data = await apiRequest<{ success: boolean; count: number; members: TeamMember[] }>('/api/team/direct');
 
     console.log(`✅ [Team Service] Found ${data.count} direct referrals`);
     return data.members;
@@ -154,7 +182,7 @@ export async function getTeamStats(): Promise<{ direct_members: number; total_te
       direct_members: number;
       total_team: number;
       team_investment: number;
-    }>('/team/stats');
+    }>('/api/team/stats');
 
     console.log(`✅ [Team Service] Stats loaded - Direct: ${data.direct_members}, Total: ${data.total_team}`);
     return data;

@@ -154,17 +154,17 @@ export const DashboardNew: React.FC = () => {
         console.log('📊 [Dashboard] Received data for user:', dashboardData.user.id, dashboardData.user.email);
         console.log('📊 [Dashboard] Team stats:', teamData.summary.total_team, 'members,', teamData.summary.direct_members, 'direct');
         console.log('📊 DashboardNew - Earnings:', {
-          today: dashboardData.statistics.today_earnings,
-          week: dashboardData.statistics.week_earnings,
-          month: dashboardData.statistics.month_earnings,
-          roi: dashboardData.statistics.roi_earned
+          today: dashboardData.statistics?.today_earnings || 0,
+          week: dashboardData.statistics?.week_earnings || 0,
+          month: dashboardData.statistics?.month_earnings || 0,
+          roi: dashboardData.statistics?.roi_earned || 0
         });
         console.log('📊 DashboardNew - Binary Volume:', {
-          left: dashboardData.statistics.left_volume,
-          right: dashboardData.statistics.right_volume,
-          total: dashboardData.statistics.total_volume
+          left: dashboardData.statistics?.left_binary_volume || 0,
+          right: dashboardData.statistics?.right_binary_volume || 0,
+          total: (dashboardData.statistics?.left_binary_volume || 0) + (dashboardData.statistics?.right_binary_volume || 0)
         });
-        console.log('📊 DashboardNew - Packages:', dashboardData.active_packages.length, 'active');
+        console.log('📊 DashboardNew - Packages:', dashboardData.packages?.active_count || dashboardData.active_packages?.length || 0, 'active');
         console.log('📊 DashboardNew - Transactions:', dashboardData.recent_transactions?.length || 0, 'recent');
         console.log('📊 DashboardNew - Full API Response:', dashboardData);
 
@@ -190,17 +190,17 @@ export const DashboardNew: React.FC = () => {
             total: teamData.summary.total_team || 0  // ✅ From MySQL
           },
           binaryVolume: {
-            left: dashboardData.statistics.left_volume || 0,
-            right: dashboardData.statistics.right_volume || 0
+            left: dashboardData.statistics?.left_binary_volume || 0,
+            right: dashboardData.statistics?.right_binary_volume || 0
           },
           nextRank: {
-            current: dashboardData.user.current_rank.replace('_', ' ').toUpperCase(),
-            next: dashboardData.next_rank.rank.replace('_', ' ').toUpperCase(),
-            progress: Math.round((dashboardData.statistics.total_volume / dashboardData.next_rank.min_volume) * 100)
+            current: (dashboardData.user?.current_rank || 'starter').replace('_', ' ').toUpperCase(),
+            next: (dashboardData.next_rank?.next || 'bronze').replace('_', ' ').toUpperCase(),
+            progress: dashboardData.next_rank?.progress || 0
           },
           activePackages: {
-            count: dashboardData.active_packages.length || 0,
-            expiring: 0
+            count: dashboardData.packages?.active_count || dashboardData.active_packages?.length || 0,
+            expiring: dashboardData.packages?.expiring_soon || 0
           },
         });
 

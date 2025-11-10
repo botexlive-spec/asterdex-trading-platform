@@ -158,7 +158,20 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
       active_robot_subscriptions: data.active_robot_subscriptions || 0,
     };
   } catch (error: any) {
-    console.error('Error getting dashboard stats:', error);
+    console.error('❌ Error getting dashboard stats:', error);
+
+    // Check if this is a true database error (table doesn't exist, connection failed, etc.)
+    const isDatabaseError = error.message?.includes('relation') ||
+                           error.message?.includes('does not exist') ||
+                           error.message?.includes('database_not_setup') ||
+                           error.message?.includes('Connection refused');
+
+    if (isDatabaseError) {
+      console.error('💀 Database error detected - re-throwing');
+      throw new Error(error.message || 'Database not available');
+    }
+
+    // For other errors (auth, permissions, network), throw but with clear message
     throw new Error(error.message || 'Failed to get dashboard statistics');
   }
 };

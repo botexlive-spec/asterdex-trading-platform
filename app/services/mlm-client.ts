@@ -13,7 +13,57 @@ export type { WalletBalance, Transaction, DepositAddress } from './wallet.servic
  * Get user dashboard data
  */
 export async function getUserDashboard() {
-  return get('/api/dashboard');
+  try {
+    const data = await get('/api/dashboard');
+
+    // Ensure all expected fields have fallback values
+    return {
+      user: data.user || {},
+      statistics: {
+        today_earnings: data.statistics?.today_earnings || 0,
+        week_earnings: data.statistics?.week_earnings || 0,
+        month_earnings: data.statistics?.month_earnings || 0,
+        roi_earned: data.statistics?.roi_earned || 0,
+        direct_referrals: data.statistics?.direct_referrals || 0,
+        total_team: data.statistics?.total_team || 0,
+        left_binary_volume: data.statistics?.left_binary_volume || 0,
+        right_binary_volume: data.statistics?.right_binary_volume || 0,
+      },
+      packages: {
+        active_count: data.packages?.active_count || 0,
+        expiring_soon: data.packages?.expiring_soon || 0,
+      },
+      active_packages: data.active_packages || [],
+      recent_transactions: data.recent_transactions || [],
+      direct_referrals: data.direct_referrals || [],
+      next_rank: {
+        current: data.next_rank?.current || 'starter',
+        next: data.next_rank?.next || 'bronze',
+        progress: data.next_rank?.progress || 0,
+      },
+    };
+  } catch (error: any) {
+    console.error('Error fetching dashboard data:', error);
+    // Return minimal safe structure
+    return {
+      user: {},
+      statistics: {
+        today_earnings: 0,
+        week_earnings: 0,
+        month_earnings: 0,
+        roi_earned: 0,
+        direct_referrals: 0,
+        total_team: 0,
+        left_binary_volume: 0,
+        right_binary_volume: 0,
+      },
+      packages: { active_count: 0, expiring_soon: 0 },
+      active_packages: [],
+      recent_transactions: [],
+      direct_referrals: [],
+      next_rank: { current: 'starter', next: 'bronze', progress: 0 },
+    };
+  }
 }
 
 /**

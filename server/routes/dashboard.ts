@@ -101,6 +101,41 @@ router.get('/', async (req: Request, res: Response) => {
         const nextRankName = currentRankIndex < rankOrder.length - 1 ? rankOrder[currentRankIndex + 1] : user.current_rank;
         const rankProgress = Math.min(Math.floor((totalTeam / 100) * 100), 100); // Simple calculation based on team size
 
+        // Get recent transactions (last 10)
+        const transactionsResult = await query(
+          `SELECT id, transaction_type, amount, status, created_at
+          FROM mlm_transactions
+          WHERE user_id = ?
+          ORDER BY created_at DESC
+          LIMIT 10`,
+          [decoded.id]
+        );
+        const recentTransactions = transactionsResult.rows || [];
+
+        // Get direct referrals (last 10)
+        const referralsResult = await query(
+          `SELECT id, email, full_name, total_investment, created_at
+          FROM users
+          WHERE sponsor_id = ?
+          ORDER BY created_at DESC
+          LIMIT 10`,
+          [decoded.id]
+        );
+        const directReferrals = referralsResult.rows || [];
+
+        // Get active packages list
+        const activePackagesList = await query(
+          `SELECT up.id, up.package_id, up.investment_amount, up.daily_roi_amount,
+          up.total_roi_earned, up.total_roi_limit, up.status, up.activation_date,
+          up.expiry_date, p.name as package_name, p.daily_roi_percentage, p.duration_days
+          FROM user_packages up
+          LEFT JOIN packages p ON up.package_id = p.id
+          WHERE up.user_id = ? AND up.status = 'active'
+          ORDER BY up.activation_date DESC`,
+          [decoded.id]
+        );
+        const activePackagesArray = activePackagesList.rows || [];
+
         console.log('📊 Dashboard API - Fetching fresh data from DB for user:', user.email);
 
         return {
@@ -132,6 +167,9 @@ router.get('/', async (req: Request, res: Response) => {
             active_count: parseInt(activePackages.active_count || 0),
             expiring_soon: parseInt(activePackages.expiring_soon || 0),
           },
+          active_packages: activePackagesArray,
+          recent_transactions: recentTransactions,
+          direct_referrals: directReferrals,
           next_rank: {
             current: user.current_rank || 'starter',
             next: nextRankName,
