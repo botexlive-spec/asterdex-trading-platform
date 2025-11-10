@@ -179,29 +179,10 @@ export const getSystemLogs = async (
   limit: number = 100
 ): Promise<any[]> => {
   try {
-        // Verify admin access
-    // Admin auth handled by backend// Get commission runs as system logs
-      .from('commission_runs')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    if (filters?.dateFrom) {
-      query = query.gte('created_at', filters.dateFrom);
-    }
-
-    if (filters?.dateTo) {
-      query = query.lte('created_at', filters.dateTo);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Error fetching system logs:', error);
-      return [];
-    }
-
-    return data || [];
+    // TODO: Implement backend API endpoint for system logs
+    // Should fetch from /api/admin/system-logs or similar
+    console.log('getSystemLogs: Placeholder - returning empty array');
+    return [];
   } catch (error: any) {
     console.error('Error getting system logs:', error);
     return [];

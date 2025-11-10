@@ -71,8 +71,10 @@ const KYCManagement = lazy(() => import('./pages/admin/KYCManagement'));
 const PackageManagement = lazy(() => import('./pages/admin/PackageManagementComplete'));
 const FinancialManagement = lazy(() => import('./pages/admin/FinancialManagement'));
 const CommissionManagement = lazy(() => import('./pages/admin/CommissionManagement'));
+const CommissionManagementPlaceholder = lazy(() => import('./pages/admin/CommissionManagementPlaceholder'));
 const RankManagement = lazy(() => import('./pages/admin/RankManagement'));
 const BinaryManagement = lazy(() => import('./pages/admin/BinaryManagement'));
+const BinaryTreePlaceholder = lazy(() => import('./pages/admin/BinaryTreePlaceholder'));
 const ReportsAdmin = lazy(() => import('./pages/admin/ReportsAdmin'));
 const SettingsAdmin = lazy(() => import('./pages/admin/SettingsAdmin'));
 const CommunicationsAdmin = lazy(() => import('./pages/admin/CommunicationsAdmin'));
@@ -379,9 +381,11 @@ const router = createBrowserRouter([
           { path: 'withdrawals', element: <WithdrawalApproval /> },
           { path: 'financial', element: <FinancialManagement /> },
           { path: 'commissions', element: <CommissionManagement /> },
+          { path: 'commission', element: <CommissionManagementPlaceholder /> },
           { path: 'income-simulator', element: <IncomeSimulator /> },
           { path: 'ranks', element: <RankManagement /> },
           { path: 'binary', element: <BinaryManagement /> },
+          { path: 'binary-tree', element: <BinaryTreePlaceholder /> },
           { path: 'team-report', element: <TeamReport /> },
           { path: 'reports', element: <ReportsAdmin /> },
           { path: 'communications', element: <CommunicationsAdmin /> },

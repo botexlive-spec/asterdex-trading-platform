@@ -1,231 +1,98 @@
 /**
  * Admin Binary Tree Service
- * Manages binary tree operations, placements, and settings
+ * Manages binary MLM tree structure, placements, and reports
+ *
+ * ⚠️  STUB IMPLEMENTATION
+ * All functions return placeholder data until backend API is implemented.
+ * This is a CRITICAL MLM feature that needs proper backend implementation.
+ *
+ * TODO: Implement backend routes in server/routes/admin-binary.ts
+ * TODO: Migrate these functions to use apiRequest() pattern
  */
-
-
-/**
- * ⚠️  MIGRATION IN PROGRESS: MySQL Backend Integration
- * 
- * Some functions may return empty data or throw errors until backend
- * API endpoints are fully implemented.
- * 
- * Service: Binary tree management
- * 
- * Next steps:
- * 1. Create backend API routes in server/routes/admin-binary.ts
- * 2. Replace TODO comments with actual API calls using apiRequest()
- * 3. Follow pattern from admin-rank.service.ts
- */
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-/**
- * Get auth token from localStorage or sessionStorage
- */
-function getAuthToken(): string | null {
-  return localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
-}
-
-/**
- * Make authenticated API request
- */
-async function apiRequest(endpoint: string, options: RequestInit = {}) {
-  const token = getAuthToken();
-
-  if (!token) {
-    throw new Error('No authentication token found');
-  }
-
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      ...options.headers,
-    },
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(error.error || `API request failed: ${response.status}`);
-  }
-
-  return response.json();
-}
-
 
 // ============================================
-// SERVICE FUNCTIONS (Need MySQL Backend APIs)
+// TYPE DEFINITIONS
 // ============================================
-
 
 export interface BinaryNode {
   id: string;
   user_id: string;
-  user_name: string;
-  user_email: string;
   parent_id: string | null;
   position: 'left' | 'right' | null;
+  left_child_id: string | null;
+  right_child_id: string | null;
   left_volume: number;
   right_volume: number;
-  personal_volume: number;
+  total_volume: number;
   level: number;
-  is_active: boolean;
-  left_child?: BinaryNode;
-  right_child?: BinaryNode;
+  created_at: string;
+  updated_at: string;
+  user?: {
+    full_name?: string;
+    email?: string;
+    package_name?: string;
+  };
+  left?: BinaryNode | null;
+  right?: BinaryNode | null;
 }
 
 export interface BinarySettings {
-  spilloverEnabled: boolean;
-  spilloverRule: 'auto' | 'manual';
-  placementPriority: 'left' | 'right' | 'weaker-leg' | 'balanced';
-  cappingEnabled: boolean;
-  dailyCap: number;
-  weeklyCap: number;
-  monthlyCap: number;
-  matchingBonusPercentage: number;
-  carryForwardEnabled: boolean;
-  maxCarryForwardDays: number;
+  id: string;
+  match_bonus_percentage: number;
+  max_daily_matches: number;
+  carryover_enabled: boolean;
+  require_active_left: boolean;
+  require_active_right: boolean;
+  min_volume_per_leg: number;
+  updated_at: string;
 }
 
 export interface BinaryReport {
-  userId: string;
-  userName: string;
-  leftVolume: number;
-  rightVolume: number;
-  lesserVolume: number;
-  matchingBonus: number;
-  carryForward: number;
-  totalEarnings: number;
-  lastCalculated: string;
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  left_volume: number;
+  right_volume: number;
+  weaker_leg: 'left' | 'right';
+  match_bonus: number;
+  matches_count: number;
+  carryover_left: number;
+  carryover_right: number;
+  report_date: string;
+  created_at: string;
 }
+
+// ============================================
+// SERVICE FUNCTIONS
+// ============================================
 
 /**
  * Get binary tree for a specific user
  */
 export const getBinaryTree = async (userId: string): Promise<BinaryNode | null> => {
   try {
-        // Verify admin access
-    // Admin auth handled by backend.from('binary_nodes')
-      .select(`
-        id,
-        user_id,
-        parent_id,
-        position,
-        left_volume,
-        right_volume,
-        personal_volume,
-        users!binary_tree_user_id_fkey (
-          id,
-          full_name,
-          email,
-          is_active
-        )
-      `)
-      .eq('user_id', userId)
-      .single();
-
-    if (error || !data) {
-      console.log('No binary tree found for user:', userId);
-      return null;
-    }
-
-    // Recursively load children
-    const node: BinaryNode = {
-      id: data.id,
-      user_id: data.user_id,
-      user_name: data.users?.full_name || 'Unknown',
-      user_email: data.users?.email || '',
-      parent_id: data.parent_id,
-      position: data.position,
-      left_volume: data.left_volume || 0,
-      right_volume: data.right_volume || 0,
-      personal_volume: data.personal_volume || 0,
-      level: 0, // Will be calculated
-      is_active: data.users?.is_active || false,
-    };
-
-    // Load children
-      .from('binary_nodes')
-      .select(`
-        id,
-        user_id,
-        parent_id,
-        position,
-        left_volume,
-        right_volume,
-        personal_volume,
-        users!binary_tree_user_id_fkey (
-          id,
-          full_name,
-          email,
-          is_active
-        )
-      `)
-      .eq('parent_id', userId);
-
-    if (children) {
-      const leftChild = children.find((c: any) => c.position === 'left');
-      const rightChild = children.find((c: any) => c.position === 'right');
-
-      if (leftChild) {
-        node.left_child = await getBinaryTree(leftChild.user_id);
-      }
-      if (rightChild) {
-        node.right_child = await getBinaryTree(rightChild.user_id);
-      }
-    }
-
-    return node;
+    // TODO: Implement backend API endpoint /api/admin/binary/tree/:userId
+    // This should recursively fetch the binary tree structure
+    console.log('getBinaryTree: Placeholder - returning null for user', userId);
+    return null;
   } catch (error: any) {
     console.error('Error getting binary tree:', error);
-    return null;
+    throw new Error(error.message || 'Failed to get binary tree');
   }
 };
 
 /**
- * Get all binary tree nodes (flat list)
+ * Get all binary nodes (flat list)
  */
 export const getAllBinaryNodes = async (): Promise<BinaryNode[]> => {
   try {
-        // Verify admin access
-    // Admin auth handled by backend.from('binary_nodes')
-      .select(`
-        id,
-        user_id,
-        parent_id,
-        position,
-        left_volume,
-        right_volume,
-        personal_volume,
-        users!binary_tree_user_id_fkey (
-          id,
-          full_name,
-          email,
-          is_active
-        )
-      `)
-      .order('created_at', { ascending: true });
-
-    if (error) throw error;
-
-    return data?.map((node: any) => ({
-      id: node.id,
-      user_id: node.user_id,
-      user_name: node.users?.full_name || 'Unknown',
-      user_email: node.users?.email || '',
-      parent_id: node.parent_id,
-      position: node.position,
-      left_volume: node.left_volume || 0,
-      right_volume: node.right_volume || 0,
-      personal_volume: node.personal_volume || 0,
-      level: 0,
-      is_active: node.users?.is_active || false,
-    })) || [];
-  } catch (error: any) {
-    console.error('Error getting all binary nodes:', error);
+    // TODO: Implement backend API endpoint /api/admin/binary/nodes
+    console.log('getAllBinaryNodes: Placeholder - returning empty array');
     return [];
+  } catch (error: any) {
+    console.error('Error getting binary nodes:', error);
+    throw new Error(error.message || 'Failed to get binary nodes');
   }
 };
 
@@ -234,20 +101,12 @@ export const getAllBinaryNodes = async (): Promise<BinaryNode[]> => {
  */
 export const getBinarySettings = async (): Promise<BinarySettings> => {
   try {
-        // Verify admin access
-    // Admin auth handled by backend.from('binary_settings')
-      .select('*')
-      .limit(1)
-      .single();
-
-    if (error || !data) {
-      return getDefaultBinarySettings();
-    }
-
-    return data;
-  } catch (error: any) {
-    console.log('Using default binary settings');
+    // TODO: Implement backend API endpoint /api/admin/binary/settings
+    console.log('getBinarySettings: Placeholder - returning default settings');
     return getDefaultBinarySettings();
+  } catch (error: any) {
+    console.error('Error getting binary settings:', error);
+    throw new Error(error.message || 'Failed to get binary settings');
   }
 };
 
@@ -256,16 +115,14 @@ export const getBinarySettings = async (): Promise<BinarySettings> => {
  */
 export const getDefaultBinarySettings = (): BinarySettings => {
   return {
-    spilloverEnabled: true,
-    spilloverRule: 'auto',
-    placementPriority: 'weaker-leg',
-    cappingEnabled: true,
-    dailyCap: 1000,
-    weeklyCap: 5000,
-    monthlyCap: 20000,
-    matchingBonusPercentage: 10,
-    carryForwardEnabled: true,
-    maxCarryForwardDays: 30,
+    id: 'default',
+    match_bonus_percentage: 10,
+    max_daily_matches: 100,
+    carryover_enabled: true,
+    require_active_left: true,
+    require_active_right: true,
+    min_volume_per_leg: 100,
+    updated_at: new Date().toISOString(),
   };
 };
 
@@ -274,26 +131,9 @@ export const getDefaultBinarySettings = (): BinarySettings => {
  */
 export const saveBinarySettings = async (settings: BinarySettings): Promise<void> => {
   try {
-        // Verify admin access
-    // Admin auth handled by backend.from('binary_settings')
-      .select('id')
-      .limit(1)
-      .single();
-
-    if (existing) {
-        .from('binary_settings')
-        .update(settings)
-        .eq('id', existing.id);
-
-      if (error) throw error;
-    } else {
-        .from('binary_settings')
-        .insert([settings]);
-
-      if (error) throw error;
-    }
-
-    console.log('Binary settings saved successfully');
+    // TODO: Implement backend API endpoint /api/admin/binary/settings
+    // PUT request to update settings in database
+    console.log('saveBinarySettings: Placeholder - simulating save', settings);
   } catch (error: any) {
     console.error('Error saving binary settings:', error);
     throw new Error(error.message || 'Failed to save binary settings');
@@ -301,7 +141,7 @@ export const saveBinarySettings = async (settings: BinarySettings): Promise<void
 };
 
 /**
- * Manual binary placement
+ * Manually place a user in the binary tree
  */
 export const manualBinaryPlacement = async (
   userId: string,
@@ -309,105 +149,51 @@ export const manualBinaryPlacement = async (
   position: 'left' | 'right'
 ): Promise<void> => {
   try {
-        // Verify admin access
-    // Admin auth handled by backend// Check if position is available
-      .from('binary_nodes')
-      .select('id')
-      .eq('parent_id', parentId)
-      .eq('position', position)
-      .single();
-
-    if (existing) {
-      throw new Error(`Position ${position} under parent is already occupied`);
-    }
-
-    // Update user's binary tree entry
-      .from('binary_nodes')
-      .update({
-        parent_id: parentId,
-        position: position,
-      })
-      .eq('user_id', userId);
-
-    if (error) throw error;
-
-    // Log admin action
-      .from('admin_actions')
-      .insert([{
-        action_type: 'binary_placement',
-        target_id: userId,
-        details: {
-          parent_id: parentId,
-          position,
-        },
-      }]);
-
-    console.log(`User ${userId} placed at ${position} under ${parentId}`);
+    // TODO: Implement backend API endpoint /api/admin/binary/placement
+    // POST request to place user in specific position
+    // This needs to:
+    // 1. Check if position is available
+    // 2. Create binary_node record
+    // 3. Update parent's left_child_id or right_child_id
+    // 4. Recalculate volumes up the tree
+    console.log('manualBinaryPlacement: Placeholder - simulating placement', { userId, parentId, position });
   } catch (error: any) {
-    console.error('Error with manual placement:', error);
+    console.error('Error placing user in binary tree:', error);
     throw new Error(error.message || 'Failed to place user in binary tree');
   }
 };
 
 /**
- * Get binary reports
+ * Get binary reports (match bonus calculations)
  */
 export const getBinaryReports = async (): Promise<BinaryReport[]> => {
   try {
-        // Verify admin access
-    // Admin auth handled by backend.from('binary_nodes')
-      .select(`
-        user_id,
-        left_volume,
-        right_volume,
-        users!binary_tree_user_id_fkey (
-          id,
-          full_name
-        )
-      `)
-      .order('left_volume', { ascending: false })
-      .limit(100);
-
-    if (error) throw error;
-
-    return data?.map((node: any) => {
-      const leftVolume = node.left_volume || 0;
-      const rightVolume = node.right_volume || 0;
-      const lesserVolume = Math.min(leftVolume, rightVolume);
-      const matchingBonus = lesserVolume * 0.1; // 10% matching bonus
-
-      return {
-        userId: node.user_id,
-        userName: node.users?.full_name || 'Unknown',
-        leftVolume,
-        rightVolume,
-        lesserVolume,
-        matchingBonus,
-        carryForward: 0, // TODO: Calculate carry forward
-        totalEarnings: matchingBonus,
-        lastCalculated: new Date().toISOString(),
-      };
-    }) || [];
+    // TODO: Implement backend API endpoint /api/admin/binary/reports
+    // Should return daily/weekly binary matching reports
+    console.log('getBinaryReports: Placeholder - returning empty array');
+    return [];
   } catch (error: any) {
     console.error('Error getting binary reports:', error);
-    return [];
+    throw new Error(error.message || 'Failed to get binary reports');
   }
 };
 
 /**
- * Recalculate binary volumes
+ * Recalculate binary volumes for all nodes
  */
 export const recalculateBinaryVolumes = async (): Promise<number> => {
   try {
-        // Verify admin access
-    // Admin auth handled by backend// This would typically be a database function or complex calculation
-    // For now, return a count of nodes processed
-    const nodes = await getAllBinaryNodes();
-
-    console.log(`Recalculated volumes for ${nodes.length} nodes`);
-    return nodes.length;
+    // TODO: Implement backend API endpoint /api/admin/binary/recalculate
+    // POST request to trigger volume recalculation
+    // This should:
+    // 1. Traverse tree from bottom to top
+    // 2. Calculate volumes for each leg
+    // 3. Update binary_nodes table
+    // 4. Return count of updated nodes
+    console.log('recalculateBinaryVolumes: Placeholder - simulating recalculation');
+    return 0;
   } catch (error: any) {
-    console.error('Error recalculating volumes:', error);
-    throw new Error(error.message || 'Failed to recalculate volumes');
+    console.error('Error recalculating binary volumes:', error);
+    throw new Error(error.message || 'Failed to recalculate binary volumes');
   }
 };

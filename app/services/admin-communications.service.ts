@@ -1,9 +1,11 @@
 /**
  * Admin Communications Service
  * Manage emails, SMS, announcements, news, and push notifications
+ *
+ * ⚠️  STUB IMPLEMENTATION
+ * All functions return placeholder data until backend API is implemented.
+ * This fixes orphaned Supabase code that was causing build failures.
  */
-
-import { requireAdmin } from '../middleware/admin.middleware';
 
 // ============================================
 // NOTIFICATIONS (PUSH & IN-APP)
@@ -11,28 +13,9 @@ import { requireAdmin } from '../middleware/admin.middleware';
 
 export const getUserNotifications = async (limit: number = 100) => {
   try {
-        // Verify admin access
-    await requireAdmin();
-
-      .from('notifications')
-      .select(`
-        id,
-        user_id,
-        title,
-        message,
-        type,
-        is_read,
-        created_at,
-        users!inner (
-          email,
-          full_name
-        )
-      `)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    if (error) throw error;
-    return data || [];
+    // TODO: Implement backend API endpoint /api/admin/notifications
+    console.log('getUserNotifications: Placeholder - returning empty array');
+    return [];
   } catch (error: any) {
     console.error('Get notifications error:', error);
     return [];
@@ -46,41 +29,11 @@ export const sendBulkNotification = async (data: {
   targetUsers: 'all' | 'active' | 'inactive';
 }) => {
   try {
-        // Verify admin access
-    await requireAdmin();
-
-// Get target users
-
-    if (data.targetUsers === 'active') {
-      query = query.eq('is_active', true);
-    } else if (data.targetUsers === 'inactive') {
-      query = query.eq('is_active', false);
-    }
-
-    const { data: users, error: usersError } = await query;
-    if (usersError) throw usersError;
-
-    if (!users || users.length === 0) {
-      throw new Error('No target users found');
-    }
-
-    // Create notifications for all users
-    const notifications = users.map((user) => ({
-      user_id: user.id,
-      title: data.title,
-      message: data.message,
-      type: data.type || 'announcement',
-      is_read: false,
-    }));
-
-      .from('notifications')
-      .insert(notifications);
-
-    if (insertError) throw insertError;
-
+    // TODO: Implement backend API endpoint /api/admin/notifications/bulk
+    console.log('sendBulkNotification: Placeholder - simulating send to', data.targetUsers);
     return {
       success: true,
-      recipients: users.length,
+      recipients: 0,
     };
   } catch (error: any) {
     console.error('Send bulk notification error:', error);
@@ -89,16 +42,13 @@ export const sendBulkNotification = async (data: {
 };
 
 // ============================================
-// EMAIL HISTORY (Using Transactions as Proxy)
+// EMAIL HISTORY
 // ============================================
 
 export const getEmailHistory = async () => {
   try {
-        // Verify admin access
-    await requireAdmin();
-
-// Since there's no email_history table, we'll return mock data
-    // In production, you'd integrate with an email service like SendGrid
+    // TODO: Integrate with email service (SendGrid, AWS SES, etc.)
+    console.log('getEmailHistory: Placeholder - returning mock data');
     return [
       {
         id: '1',
@@ -123,43 +73,13 @@ export const sendBulkEmail = async (data: {
   schedule?: string;
 }) => {
   try {
-        // Verify admin access
-    await requireAdmin();
-
-// Get target users
-
-    if (data.recipients === 'verified') {
-      query = query.eq('kyc_status', 'approved');
-    } else if (data.recipients === 'unverified') {
-      query = query.neq('kyc_status', 'approved');
-    }
-
-    const { data: users, error: usersError } = await query;
-    if (usersError) throw usersError;
-
-    if (!users || users.length === 0) {
-      throw new Error('No target users found');
-    }
-
-    // In production, integrate with email service (SendGrid, AWS SES, etc.)
-    // For now, create notification records
-    const notifications = users.map((user) => ({
-      user_id: user.id,
-      title: data.subject,
-      message: data.body,
-      type: 'email',
-      is_read: false,
-    }));
-
-      .from('notifications')
-      .insert(notifications);
-
-    if (insertError) throw insertError;
-
+    // TODO: Implement backend API endpoint /api/admin/emails/bulk
+    // TODO: Integrate with email service (SendGrid, AWS SES, etc.)
+    console.log('sendBulkEmail: Placeholder - simulating send to', data.recipients);
     return {
       success: true,
-      recipients: users.length,
-      message: `Email queued for ${users.length} recipients`,
+      recipients: 0,
+      message: `Email queued for 0 recipients (placeholder)`,
     };
   } catch (error: any) {
     console.error('Send bulk email error:', error);
@@ -168,7 +88,7 @@ export const sendBulkEmail = async (data: {
 };
 
 // ============================================
-// SMS (Using Notifications as Proxy)
+// SMS
 // ============================================
 
 export const sendBulkSMS = async (data: {
@@ -176,46 +96,13 @@ export const sendBulkSMS = async (data: {
   recipients: 'all' | 'verified' | 'active';
 }) => {
   try {
-        // Verify admin access
-    await requireAdmin();
-
-// Get target users
-
-    if (data.recipients === 'verified') {
-      query = query.eq('kyc_status', 'approved');
-    } else if (data.recipients === 'active') {
-      query = query.eq('is_active', true);
-    }
-
-    const { data: users, error: usersError } = await query;
-    if (usersError) throw usersError;
-
-    // Filter users with phone numbers
-    const usersWithPhone = users?.filter((u) => u.phone) || [];
-
-    if (usersWithPhone.length === 0) {
-      throw new Error('No users with phone numbers found');
-    }
-
-    // In production, integrate with SMS service (Twilio, AWS SNS, etc.)
-    // For now, create notification records
-    const notifications = usersWithPhone.map((user) => ({
-      user_id: user.id,
-      title: 'SMS Notification',
-      message: data.message,
-      type: 'sms',
-      is_read: false,
-    }));
-
-      .from('notifications')
-      .insert(notifications);
-
-    if (insertError) throw insertError;
-
+    // TODO: Implement backend API endpoint /api/admin/sms/bulk
+    // TODO: Integrate with SMS service (Twilio, AWS SNS, etc.)
+    console.log('sendBulkSMS: Placeholder - simulating send to', data.recipients);
     return {
       success: true,
-      recipients: usersWithPhone.length,
-      creditsUsed: usersWithPhone.length, // 1 credit per SMS
+      recipients: 0,
+      creditsUsed: 0,
     };
   } catch (error: any) {
     console.error('Send bulk SMS error:', error);
@@ -243,22 +130,8 @@ export interface Announcement {
 
 export const getAnnouncements = async () => {
   try {
-        // Verify admin access
-    await requireAdmin();
-
-// Check if announcements table exists
-      .from('system_settings')
-      .select('setting_key, setting_value')
-      .like('setting_key', 'announcement_%')
-      .limit(10);
-
-    // If no announcements in system_settings, return empty
-    // In production, you'd create a dedicated announcements table
-    if (error) {
-      console.warn('Announcements table may not exist:', error);
-      return [];
-    }
-
+    // TODO: Create dedicated announcements table and API endpoint
+    console.log('getAnnouncements: Placeholder - returning empty array');
     return [];
   } catch (error: any) {
     console.error('Get announcements error:', error);
@@ -268,36 +141,11 @@ export const getAnnouncements = async () => {
 
 export const createAnnouncement = async (announcement: Omit<Announcement, 'id' | 'created_at' | 'updated_at'>) => {
   try {
-        // Verify admin access
-    await requireAdmin();
-
-// Store as system setting (temporary solution)
-    // In production, create a dedicated announcements table
-    const announcementId = `announcement_${Date.now()}`;
-
-      .from('system_settings')
-      .insert({
-        setting_key: announcementId,
-        setting_value: JSON.stringify(announcement),
-        category: 'announcements',
-        description: announcement.title,
-      });
-
-    if (error) throw error;
-
-    // Also create notifications for all users
-    const notificationData = {
-      title: announcement.title,
-      message: announcement.message,
-      type: `announcement_${announcement.priority}`,
-      targetUsers: 'all' as const,
-    };
-
-    await sendBulkNotification(notificationData);
-
+    // TODO: Implement backend API endpoint /api/admin/announcements
+    console.log('createAnnouncement: Placeholder - simulating create', announcement.title);
     return {
       success: true,
-      id: announcementId,
+      message: 'Announcement created (placeholder)',
     };
   } catch (error: any) {
     console.error('Create announcement error:', error);
@@ -307,16 +155,12 @@ export const createAnnouncement = async (announcement: Omit<Announcement, 'id' |
 
 export const deleteAnnouncement = async (id: string) => {
   try {
-        // Verify admin access
-    await requireAdmin();
-
-      .from('system_settings')
-      .delete()
-      .eq('setting_key', id);
-
-    if (error) throw error;
-
-    return { success: true };
+    // TODO: Implement backend API endpoint /api/admin/announcements/:id
+    console.log('deleteAnnouncement: Placeholder - simulating delete', id);
+    return {
+      success: true,
+      message: 'Announcement deleted (placeholder)',
+    };
   } catch (error: any) {
     console.error('Delete announcement error:', error);
     throw new Error(error.message || 'Failed to delete announcement');
@@ -324,31 +168,27 @@ export const deleteAnnouncement = async (id: string) => {
 };
 
 // ============================================
-// NEWS/BLOG ARTICLES
+// NEWS ARTICLES
 // ============================================
 
 export interface NewsArticle {
   id: string;
   title: string;
+  summary: string;
   content: string;
-  category: string;
-  featured_image?: string;
-  author: string;
-  publish_date: string;
-  status: 'published' | 'draft';
+  image_url?: string;
+  author_id: string;
+  author_name?: string;
+  status: 'draft' | 'published' | 'archived';
   views: number;
-  created_at?: string;
-  updated_at?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export const getNewsArticles = async () => {
   try {
-        // Verify admin access
-    await requireAdmin();
-
-// Check if news_articles table exists
-    // In production, create a dedicated news_articles table
-    // For now, return empty array
+    // TODO: Create dedicated news_articles table and API endpoint
+    console.log('getNewsArticles: Placeholder - returning empty array');
     return [];
   } catch (error: any) {
     console.error('Get news articles error:', error);
@@ -358,25 +198,11 @@ export const getNewsArticles = async () => {
 
 export const createNewsArticle = async (article: Omit<NewsArticle, 'id' | 'views' | 'created_at' | 'updated_at'>) => {
   try {
-        // Verify admin access
-    await requireAdmin();
-
-// Store as system setting (temporary solution)
-    const articleId = `news_${Date.now()}`;
-
-      .from('system_settings')
-      .insert({
-        setting_key: articleId,
-        setting_value: JSON.stringify(article),
-        category: 'news',
-        description: article.title,
-      });
-
-    if (error) throw error;
-
+    // TODO: Implement backend API endpoint /api/admin/news
+    console.log('createNewsArticle: Placeholder - simulating create', article.title);
     return {
       success: true,
-      id: articleId,
+      message: 'News article created (placeholder)',
     };
   } catch (error: any) {
     console.error('Create news article error:', error);
@@ -386,19 +212,12 @@ export const createNewsArticle = async (article: Omit<NewsArticle, 'id' | 'views
 
 export const updateNewsArticle = async (id: string, article: Partial<NewsArticle>) => {
   try {
-        // Verify admin access
-    await requireAdmin();
-
-      .from('system_settings')
-      .update({
-        setting_value: JSON.stringify(article),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('setting_key', id);
-
-    if (error) throw error;
-
-    return { success: true };
+    // TODO: Implement backend API endpoint /api/admin/news/:id
+    console.log('updateNewsArticle: Placeholder - simulating update', id);
+    return {
+      success: true,
+      message: 'News article updated (placeholder)',
+    };
   } catch (error: any) {
     console.error('Update news article error:', error);
     throw new Error(error.message || 'Failed to update news article');
@@ -407,16 +226,12 @@ export const updateNewsArticle = async (id: string, article: Partial<NewsArticle
 
 export const deleteNewsArticle = async (id: string) => {
   try {
-        // Verify admin access
-    await requireAdmin();
-
-      .from('system_settings')
-      .delete()
-      .eq('setting_key', id);
-
-    if (error) throw error;
-
-    return { success: true };
+    // TODO: Implement backend API endpoint /api/admin/news/:id
+    console.log('deleteNewsArticle: Placeholder - simulating delete', id);
+    return {
+      success: true,
+      message: 'News article deleted (placeholder)',
+    };
   } catch (error: any) {
     console.error('Delete news article error:', error);
     throw new Error(error.message || 'Failed to delete news article');
@@ -429,46 +244,27 @@ export const deleteNewsArticle = async (id: string) => {
 
 export const getCommunicationsStats = async () => {
   try {
-        // Verify admin access
-    await requireAdmin();
-
-// Get total users
-      .from('users')
-      .select('*', { count: 'exact', head: true });
-
-    // Get verified users
-      .from('users')
-      .select('*', { count: 'exact', head: true })
-      .eq('kyc_status', 'approved');
-
-    // Get active users
-      .from('users')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_active', true);
-
-    // Get total notifications sent (last 30 days)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      .from('notifications')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', thirtyDaysAgo.toISOString());
-
+    // TODO: Implement backend API endpoint /api/admin/communications/stats
+    console.log('getCommunicationsStats: Placeholder - returning zero stats');
     return {
-      totalUsers: totalUsers || 0,
-      verifiedUsers: verifiedUsers || 0,
-      activeUsers: activeUsers || 0,
-      notificationsSent: notificationsSent || 0,
-      smsCreditsBalance: 15000, // Mock data - integrate with SMS provider
+      total_emails_sent: 0,
+      total_sms_sent: 0,
+      total_notifications_sent: 0,
+      active_announcements: 0,
+      total_news_articles: 0,
+      email_open_rate: 0,
+      sms_delivery_rate: 0,
     };
   } catch (error: any) {
     console.error('Get communications stats error:', error);
     return {
-      totalUsers: 0,
-      verifiedUsers: 0,
-      activeUsers: 0,
-      notificationsSent: 0,
-      smsCreditsBalance: 0,
+      total_emails_sent: 0,
+      total_sms_sent: 0,
+      total_notifications_sent: 0,
+      active_announcements: 0,
+      total_news_articles: 0,
+      email_open_rate: 0,
+      sms_delivery_rate: 0,
     };
   }
 };
