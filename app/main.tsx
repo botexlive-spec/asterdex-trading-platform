@@ -73,13 +73,13 @@ const FinancialManagement = lazy(() => import('./pages/admin/FinancialManagement
 const CommissionManagement = lazy(() => import('./pages/admin/CommissionManagement'));
 const CommissionManagementPlaceholder = lazy(() => import('./pages/admin/CommissionManagementPlaceholder'));
 const RankManagement = lazy(() => import('./pages/admin/RankManagement'));
-const BinaryManagement = lazy(() => import('./pages/admin/BinaryManagement'));
-const BinaryTreePlaceholder = lazy(() => import('./pages/admin/BinaryTreePlaceholder'));
+// const BinaryManagement = lazy(() => import('./pages/admin/BinaryManagement')); // DISABLED: Has broken service dependencies
+// const BinaryTreePlaceholder = lazy(() => import('./pages/admin/BinaryTreePlaceholder')); // DISABLED: Has broken service dependencies
 const ReportsAdmin = lazy(() => import('./pages/admin/ReportsAdmin'));
 const SettingsAdmin = lazy(() => import('./pages/admin/SettingsAdmin'));
-const CommunicationsAdmin = lazy(() => import('./pages/admin/CommunicationsAdmin'));
+// const CommunicationsAdmin = lazy(() => import('./pages/admin/CommunicationsAdmin')); // DISABLED: Has broken service dependencies
 const SupportManagement = lazy(() => import('./pages/admin/SupportManagement'));
-const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
+// const AuditLogs = lazy(() => import('./pages/admin/AuditLogs')); // DISABLED: Has broken service dependencies
 const SystemConfiguration = lazy(() => import('./pages/admin/SystemConfiguration'));
 const IncomeSimulator = lazy(() => import('./pages/admin/IncomeSimulator'));
 const WithdrawalApproval = lazy(() => import('./pages/admin/WithdrawalApproval'));
@@ -384,13 +384,13 @@ const router = createBrowserRouter([
           { path: 'commission', element: <CommissionManagementPlaceholder /> },
           { path: 'income-simulator', element: <IncomeSimulator /> },
           { path: 'ranks', element: <RankManagement /> },
-          { path: 'binary', element: <BinaryManagement /> },
-          { path: 'binary-tree', element: <BinaryTreePlaceholder /> },
+          // { path: 'binary', element: <BinaryManagement /> }, // DISABLED: Has broken service dependencies
+          // { path: 'binary-tree', element: <BinaryTreePlaceholder /> }, // DISABLED: Has broken service dependencies
           { path: 'team-report', element: <TeamReport /> },
           { path: 'reports', element: <ReportsAdmin /> },
-          { path: 'communications', element: <CommunicationsAdmin /> },
+          // { path: 'communications', element: <CommunicationsAdmin /> }, // DISABLED: Has broken service dependencies
           { path: 'support', element: <SupportManagement /> },
-          { path: 'audit', element: <AuditLogs /> },
+          // { path: 'audit', element: <AuditLogs /> }, // DISABLED: Has broken service dependencies
           { path: 'settings', element: <SettingsAdmin /> },
           { path: 'configuration', element: <SystemConfiguration /> },
           { path: 'plan-settings', element: <PlanSettings /> },
