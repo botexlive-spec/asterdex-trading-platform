@@ -14,10 +14,16 @@ export default function App() {
   const location = useLocation();
 
   // Only load OrderlyProvider (trading/wallet functionality) for trading routes
-  // Trading routes: /perp/* and /portfolio/*
+  // Trading routes: /perp/* and /portfolio/* and root / (which redirects to /perp)
   // MLM routes: /dashboard, /team, /wallet, /packages, etc. - don't need OrderlyProvider
-  const needsOrderlyProvider = location.pathname.startsWith('/perp') ||
-                                location.pathname.startsWith('/portfolio');
+  const needsOrderlyProvider = location.pathname === '/' ||
+                                location.pathname.startsWith('/perp') ||
+                                location.pathname.startsWith('/portfolio') ||
+                                location.pathname.startsWith('/markets') ||
+                                location.pathname.startsWith('/leaderboard') ||
+                                location.pathname.startsWith('/rewards') ||
+                                location.pathname.startsWith('/vaults') ||
+                                location.pathname.startsWith('/swap');
 
   const content = (
     <div className="pb-0 md:pb-0">

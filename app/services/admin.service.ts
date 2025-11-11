@@ -71,7 +71,7 @@ export interface Transaction {
  */
 export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
   try {
-    const response = await apiClient.get<AdminDashboardStats>('/api/admin/analytics/overview');
+    const response = await apiClient.get<AdminDashboardStats>('/admin/analytics/overview');
 
     if (response.error) {
       throw new Error(response.error);
@@ -144,7 +144,7 @@ export async function createUser(userData: {
   sponsor_id?: string;
 }): Promise<User> {
   try {
-    const response = await apiClient.post<User>('/api/admin/users', userData);
+    const response = await apiClient.post<User>('/admin/users', userData);
 
     if (response.error) {
       throw new Error(response.error);
@@ -220,7 +220,7 @@ export async function resetUserPassword(
  */
 export async function getPackages(): Promise<Package[]> {
   try {
-    const response = await apiClient.get<{ packages: Package[] }>('/api/admin/packages');
+    const response = await apiClient.get<{ packages: Package[] }>('/admin/packages');
 
     if (response.error) {
       throw new Error(response.error);
@@ -238,7 +238,7 @@ export async function getPackages(): Promise<Package[]> {
  */
 export async function createPackage(packageData: Partial<Package>): Promise<Package> {
   try {
-    const response = await apiClient.post<Package>('/api/admin/packages', packageData);
+    const response = await apiClient.post<Package>('/admin/packages', packageData);
 
     if (response.error) {
       throw new Error(response.error);
@@ -354,7 +354,7 @@ export async function getCommissions(params?: {
 export async function distributeROI(): Promise<{ message: string; distributed: number }> {
   try {
     const response = await apiClient.post<{ message: string; distributed: number }>(
-      '/api/admin/distribute-roi'
+      '/admin/distribute-roi'
     );
 
     if (response.error) {

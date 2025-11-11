@@ -189,7 +189,7 @@ export const getDefaultSettings = (): CommissionSettings => {
 export const saveCommissionSettings = async (settings: CommissionSettings): Promise<void> => {
   try {
     // TODO: Implement backend API endpoint for saving commission settings
-    // await apiRequest('/api/admin/commission/settings', {
+    // await apiRequest('/admin/commission/settings', {
     //   method: 'PUT',
     //   body: JSON.stringify(settings)
     // });
@@ -228,7 +228,7 @@ export const processCommissionRun = async (
 ): Promise<{ affected_users: number; total_amount: number }> => {
   try {
     // TODO: Implement backend API endpoint for processing commission runs
-    // const data = await apiRequest('/api/admin/commission/run', {
+    // const data = await apiRequest('/admin/commission/run', {
     //   method: 'POST',
     //   body: JSON.stringify({ type, dateFrom, dateTo })
     // });
@@ -256,7 +256,7 @@ export const manualCommissionAdjustment = async (
 ): Promise<void> => {
   try {
     // TODO: Implement backend API endpoint for manual adjustments
-    // await apiRequest('/api/admin/commission/adjustment', {
+    // await apiRequest('/admin/commission/adjustment', {
     //   method: 'POST',
     //   body: JSON.stringify({ userId, amount, type, reason })
     // });
@@ -274,7 +274,7 @@ export const manualCommissionAdjustment = async (
 export const getCommissionStats = async () => {
   try {
     // TODO: Implement backend API endpoint for commission stats
-    // const data = await apiRequest('/api/admin/commission/stats');
+    // const data = await apiRequest('/admin/commission/stats');
     // return data;
 
     console.log('Returning empty commission stats (placeholder)');
@@ -299,7 +299,7 @@ export const logCommissionChange = async (change: {
 }): Promise<void> => {
   try {
     // TODO: Implement backend API endpoint for logging changes
-    // await apiRequest('/api/admin/commission/changelog', {
+    // await apiRequest('/admin/commission/changelog', {
     //   method: 'POST',
     //   body: JSON.stringify(change)
     // });

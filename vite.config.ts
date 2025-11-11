@@ -48,6 +48,13 @@ export default defineConfig(() => {
       port: 5173,
       strictPort: true,
       host: true,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          secure: false,
+        },
+      },
     },
     plugins: [
       react(),
@@ -62,12 +69,36 @@ export default defineConfig(() => {
     ],
     build: {
       outDir: "build/client",
+      target: "esnext",
+      sourcemap: true,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+            'orderly-ui': ['@orderly.network/ui', '@orderly.network/ui-scaffold'],
+            'orderly-trading': ['@orderly.network/trading', '@orderly.network/markets'],
+          },
+        },
+      },
     },
     resolve: {
       dedupe: ["react", "react-dom", "react-router-dom"],
     },
     optimizeDeps: {
-      include: ["react", "react-dom", "react-router-dom"],
+      force: true,
+      entries: ["index.html", "app/main.tsx"],
+      include: [
+        "react",
+        "react-dom",
+        "react-router-dom",
+        "react/jsx-runtime",
+        "@tanstack/react-query",
+        "zod",
+      ],
+      exclude: [
+        "@orderly.network/wallet-connector",
+        "@orderly.network/wallet-connector-privy",
+      ],
     },
   };
 });

@@ -218,7 +218,7 @@ export const getFinancialStats = async (): Promise<FinancialStats> => {
   try {
     await requireAdmin();
 
-    const data = await apiRequest<any>('/api/admin/analytics/overview');
+    const data = await apiRequest<any>('/admin/analytics/overview');
 
     return {
       total_deposits: 0, // TODO: Calculate from deposits table when it exists

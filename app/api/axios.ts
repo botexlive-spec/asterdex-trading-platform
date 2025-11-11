@@ -20,7 +20,7 @@ export const apiClient: AxiosInstance = axios.create({
 // Request interceptor - Add auth token to all requests
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -42,7 +42,7 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
+        const refreshToken = localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken');
         if (!refreshToken) {
           throw new Error('No refresh token available');
         }
@@ -53,7 +53,12 @@ apiClient.interceptors.response.use(
         });
 
         const { token } = response.data;
-        localStorage.setItem('token', token);
+        // Store in same location as login
+        if (localStorage.getItem('auth_token')) {
+          localStorage.setItem('auth_token', token);
+        } else {
+          sessionStorage.setItem('auth_token', token);
+        }
 
         // Retry original request with new token
         if (originalRequest.headers) {
@@ -108,7 +113,7 @@ export const adminAPI = axios.create({
 // Apply same interceptors to user API
 userAPI.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -135,7 +140,7 @@ userAPI.interceptors.response.use(
 // Apply same interceptors to admin API
 adminAPI.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }

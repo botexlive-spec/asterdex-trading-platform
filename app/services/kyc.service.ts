@@ -2,11 +2,12 @@
  * KYC Service
  * Handles identity verification, document uploads, and KYC status management
  *
- * ⚠️  STUB IMPLEMENTATION
- * All functions return placeholder data until backend API + file storage is implemented.
- * This fixes Supabase usage without imports that was causing build failures.
+ * ✅ BACKEND INTEGRATION COMPLETE
+ * All functions now call real backend APIs via apiClient
+ * Note: File upload still uses placeholder URLs (AWS S3/Cloudinary integration pending)
  */
 
+import apiClient from '../utils/api-client';
 import {
   KYCSubmission,
   KYCSubmissionRequest,
@@ -38,12 +39,30 @@ export const uploadDocument = async (
       throw new Error('Invalid file type. Only JPEG, PNG, WEBP, and PDF are allowed');
     }
 
-    // TODO: Implement file upload to backend storage (AWS S3, Cloudinary, etc.)
-    // TODO: Create backend API endpoint /api/kyc/upload-document
-    console.log('uploadDocument: Placeholder - simulating upload for', file.name);
+    // Convert file to base64 for API transmission
+    // TODO: In production, implement actual file upload to cloud storage (AWS S3, Cloudinary, etc.)
+    const reader = new FileReader();
+    const fileDataPromise = new Promise<string>((resolve, reject) => {
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
 
-    // Return placeholder URL
-    return `https://placeholder.com/${userId}/${documentType}_${Date.now()}.${file.name.split('.').pop()}`;
+    const fileData = await fileDataPromise;
+
+    const response = await apiClient.post<{ url: string; success: boolean; message: string }>('/user/kyc/upload-document', {
+      file_data: fileData,
+      document_type: documentType,
+      file_name: file.name,
+      file_size: file.size,
+      mime_type: file.type,
+    });
+
+    if (response.error || !response.data?.url) {
+      throw new Error(response.error || 'Failed to upload document');
+    }
+
+    return response.data.url;
   } catch (error: any) {
     console.error('Error uploading document:', error);
     throw new Error(error.message || 'Failed to upload document');
@@ -57,40 +76,18 @@ export const submitKYC = async (
   request: KYCSubmissionRequest
 ): Promise<KYCSubmissionResponse> => {
   try {
-    // TODO: Implement backend API endpoint /api/kyc/submit
-    // TODO: Handle file uploads via uploadDocument()
-    // TODO: Store submission in database
+    const response = await apiClient.post<{ success: boolean; message: string }>('/user/kyc/submit', request);
 
-    console.log('submitKYC: Placeholder - simulating submission for', request.full_name);
+    if (response.error) {
+      throw new Error(response.error);
+    }
 
-    // Mock submission object
-    const mockSubmission: KYCSubmission = {
-      id: `kyc_${Date.now()}`,
-      user_id: 'current_user_id',
-      status: 'pending' as KYCStatus,
-      document_type: request.document_type,
-      document_number: request.document_number,
-      full_name: request.full_name,
-      date_of_birth: request.date_of_birth,
-      nationality: request.nationality,
-      address: request.address,
-      city: request.city,
-      state: request.state,
-      postal_code: request.postal_code,
-      country: request.country,
-      phone: request.phone,
-      front_document_url: 'https://placeholder.com/front.jpg',
-      back_document_url: request.back_document ? 'https://placeholder.com/back.jpg' : undefined,
-      selfie_url: 'https://placeholder.com/selfie.jpg',
-      proof_of_address_url: 'https://placeholder.com/address.jpg',
-      submitted_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+    // After successful submission, fetch the updated status
+    const statusResponse = await getKYCStatus();
 
     return {
-      submission: mockSubmission,
-      message: 'KYC submitted successfully (placeholder)! Documents are under review.',
+      submission: statusResponse.submission,
+      message: response.data?.message || 'KYC submitted successfully! Documents are under review.',
     };
   } catch (error: any) {
     console.error('Error submitting KYC:', error);
@@ -103,13 +100,13 @@ export const submitKYC = async (
  */
 export const getKYCStatus = async (): Promise<KYCStatusResponse> => {
   try {
-    // TODO: Implement backend API endpoint /api/kyc/status
-    // TODO: Get current user from auth token
-    // TODO: Fetch KYC submission from database
+    const response = await apiClient.get<KYCStatusResponse>('/user/kyc/status');
 
-    console.log('getKYCStatus: Placeholder - returning not_submitted status');
+    if (response.error) {
+      throw new Error(response.error);
+    }
 
-    return {
+    return response.data || {
       status: 'not_submitted' as KYCStatus,
       submission: undefined,
       can_resubmit: true,
@@ -125,9 +122,13 @@ export const getKYCStatus = async (): Promise<KYCStatusResponse> => {
  */
 export const getKYCDocuments = async (): Promise<KYCDocument[]> => {
   try {
-    // TODO: Implement backend API endpoint /api/kyc/documents
-    console.log('getKYCDocuments: Placeholder - returning empty array');
-    return [];
+    const response = await apiClient.get<{ documents: KYCDocument[] }>('/user/kyc/documents');
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+
+    return response.data?.documents || [];
   } catch (error: any) {
     console.error('Error getting KYC documents:', error);
     throw new Error(error.message || 'Failed to get KYC documents');
@@ -136,12 +137,14 @@ export const getKYCDocuments = async (): Promise<KYCDocument[]> => {
 
 /**
  * Delete a document (only for rejected or not submitted KYC)
+ * Note: Not yet implemented in backend API
  */
 export const deleteDocument = async (documentId: string): Promise<void> => {
   try {
-    // TODO: Implement backend API endpoint /api/kyc/documents/:id
+    // TODO: Implement backend API endpoint DELETE /api/user/kyc/documents/:id
     // TODO: Delete from storage and database
-    console.log('deleteDocument: Placeholder - simulating delete for', documentId);
+    console.log('deleteDocument: Not yet implemented in backend -', documentId);
+    throw new Error('Document deletion not yet implemented');
   } catch (error: any) {
     console.error('Error deleting document:', error);
     throw new Error(error.message || 'Failed to delete document');
@@ -153,9 +156,13 @@ export const deleteDocument = async (documentId: string): Promise<void> => {
  */
 export const getKYCSubmissionById = async (submissionId: string): Promise<KYCSubmission | null> => {
   try {
-    // TODO: Implement backend API endpoint /api/admin/kyc/submissions/:id
-    console.log('getKYCSubmissionById: Placeholder - returning null for', submissionId);
-    return null;
+    const response = await apiClient.get<{ submission: KYCSubmission }>(`/kyc/${submissionId}`);
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+
+    return response.data?.submission || null;
   } catch (error: any) {
     console.error('Error getting KYC submission:', error);
     throw new Error(error.message || 'Failed to get KYC submission');
@@ -169,9 +176,14 @@ export const getAllKYCSubmissions = async (
   status?: KYCStatus
 ): Promise<KYCSubmission[]> => {
   try {
-    // TODO: Implement backend API endpoint /api/admin/kyc/submissions
-    console.log('getAllKYCSubmissions: Placeholder - returning empty array, filter:', status);
-    return [];
+    const endpoint = status ? `/kyc?status=${status}` : '/kyc';
+    const response = await apiClient.get<{ submissions: KYCSubmission[]; total: number }>(endpoint);
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+
+    return response.data?.submissions || [];
   } catch (error: any) {
     console.error('Error getting KYC submissions:', error);
     throw new Error(error.message || 'Failed to get KYC submissions');
@@ -186,10 +198,13 @@ export const approveKYC = async (
   notes?: string
 ): Promise<void> => {
   try {
-    // TODO: Implement backend API endpoint /api/admin/kyc/approve
-    // TODO: Update submission status to 'approved'
-    // TODO: Update user's kyc_status field
-    console.log('approveKYC: Placeholder - simulating approval for', submissionId, notes);
+    const response = await apiClient.post(`/kyc/${submissionId}/approve`, {
+      admin_notes: notes,
+    });
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
   } catch (error: any) {
     console.error('Error approving KYC:', error);
     throw new Error(error.message || 'Failed to approve KYC');
@@ -205,10 +220,14 @@ export const rejectKYC = async (
   notes?: string
 ): Promise<void> => {
   try {
-    // TODO: Implement backend API endpoint /api/admin/kyc/reject
-    // TODO: Update submission status to 'rejected'
-    // TODO: Store rejection reason and notes
-    console.log('rejectKYC: Placeholder - simulating rejection for', submissionId, rejectionReason, notes);
+    const response = await apiClient.post(`/kyc/${submissionId}/reject`, {
+      rejection_reason: rejectionReason,
+      admin_notes: notes,
+    });
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
   } catch (error: any) {
     console.error('Error rejecting KYC:', error);
     throw new Error(error.message || 'Failed to reject KYC');

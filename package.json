@@ -18,6 +18,9 @@
     "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
     "preview": "vite preview",
     "typecheck": "tsc",
+    "verify:routes": "node scripts/verifyRoutes.cjs",
+    "verify:providers": "node scripts/verifyProviders.cjs",
+    "verify:health": "npm run verify:routes && npm run verify:providers",
     "setup": "start SETUP_INSTRUCTIONS.html",
     "setup:guide": "start SETUP_INSTRUCTIONS.html"
   },

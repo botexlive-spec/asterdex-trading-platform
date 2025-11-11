@@ -12,6 +12,7 @@ import { PlanSettingsProvider } from './context/PlanSettingsContext';
 import { UserRole } from './types/auth.types';
 import UserLayoutComponent from './layouts/UserLayout';
 import AdminLayoutComponent from './layouts/AdminLayout';
+import ErrorBoundary from './components/ErrorBoundary';
 
 import './styles/index.css';
 
@@ -404,11 +405,12 @@ const router = createBrowserRouter([
 loadRuntimeConfig().then(() => {
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-      <HelmetProvider>
-        <SettingsProvider>
-          <AuthProvider>
-            <PlanSettingsProvider>
-              <Suspense fallback={
+      <ErrorBoundary>
+        <HelmetProvider>
+          <SettingsProvider>
+            <AuthProvider>
+              <PlanSettingsProvider>
+                <Suspense fallback={
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -479,6 +481,7 @@ loadRuntimeConfig().then(() => {
           </AuthProvider>
         </SettingsProvider>
       </HelmetProvider>
+      </ErrorBoundary>
     </React.StrictMode>
   );
 });

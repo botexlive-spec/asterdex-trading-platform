@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, lazy, Suspense } from "react";
+import { ReactNode, useCallback, Suspense } from "react";
 import { OrderlyAppProvider } from "@orderly.network/react-app";
 import { useOrderlyConfig } from "@/utils/config";
 import type { NetworkId } from "@orderly.network/types";
@@ -9,6 +9,9 @@ import { getRuntimeConfigBoolean, getRuntimeConfigArray, getRuntimeConfig } from
 import { DemoGraduationChecker } from "@/components/DemoGraduationChecker";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import ServiceDisclaimerDialog from "./ServiceRestrictionsDialog";
+// Import wallet connectors eagerly (not lazy) to prevent race conditions
+import PrivyConnector from "@/components/orderlyProvider/privyConnector";
+import WalletConnector from "@/components/orderlyProvider/walletConnector";
 // import { useIpRestriction } from "@/hooks/useIpRestriction";
 
 const NETWORK_ID_KEY = "orderly_network_id";
@@ -65,9 +68,6 @@ const getDefaultLanguage = (): LocaleCode => {
 	
 	return (availableLanguages[0] || 'en') as LocaleCode;
 };
-
-const PrivyConnector = lazy(() => import("@/components/orderlyProvider/privyConnector"));
-const WalletConnector = lazy(() => import("@/components/orderlyProvider/walletConnector"));
 
 const OrderlyProvider = (props: { children: ReactNode }) => {
 	const config = useOrderlyConfig();

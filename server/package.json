@@ -1,0 +1,15 @@
+{
+  "name": "finaster-mlm-server",
+  "version": "1.0.0",
+  "description": "Finaster MLM Backend API Server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon --watch . --exec tsx index.ts",
+    "start": "tsx index.ts",
+    "dev:debug": "nodemon --watch . --inspect --exec tsx index.ts"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
